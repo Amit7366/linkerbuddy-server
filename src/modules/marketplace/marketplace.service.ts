@@ -12,6 +12,10 @@ export const marketplaceService = {
     return marketplaceModel.findMany(query);
   },
 
+  async getStats() {
+    return marketplaceModel.getStats();
+  },
+
   async getById(id: number) {
     const listing = await marketplaceModel.findById(id);
     if (!listing) {

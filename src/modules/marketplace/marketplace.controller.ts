@@ -14,6 +14,15 @@ export const marketplaceController = {
     }
   },
 
+  async getStats(_req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const stats = await marketplaceService.getStats();
+      res.json(successResponse(stats));
+    } catch (error) {
+      next(error);
+    }
+  },
+
   async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const id = Number(req.params.id);

@@ -43,6 +43,46 @@ function toResponse(row: {
   };
 }
 
+function parseDrRange(value: string): { gte?: number; lte?: number } | null {
+  const trimmed = value.trim();
+  const range = /^(\d+)\s*-\s*(\d+)$/.exec(trimmed);
+  if (range) {
+    return { gte: Number(range[1]), lte: Number(range[2]) };
+  }
+  if (/^\d+$/.test(trimmed)) {
+    return { gte: Number(trimmed) };
+  }
+  return null;
+}
+
+function applyFilterKey(
+  key: string,
+  and: Prisma.MarketplaceListingWhereInput[],
+) {
+  switch (key) {
+    case "budget":
+      and.push({ guest: { lte: 50 } });
+      break;
+    case "authority":
+      and.push({ dr: { gte: 40, lte: 60 } });
+      break;
+    case "traffic":
+      and.push({ traffic: { gte: 10000 } });
+      break;
+    case "India":
+      and.push({ country: { equals: "India", mode: "insensitive" } });
+      break;
+    case "General":
+      and.push({ niche: { equals: "General", mode: "insensitive" } });
+      break;
+    case "highDa":
+      and.push({ da: { gte: 50 } });
+      break;
+    default:
+      break;
+  }
+}
+
 function buildWhere(query: ListListingsQuery): Prisma.MarketplaceListingWhereInput {
   const where: Prisma.MarketplaceListingWhereInput = {};
   const and: Prisma.MarketplaceListingWhereInput[] = [];
@@ -68,27 +108,49 @@ function buildWhere(query: ListListingsQuery): Prisma.MarketplaceListingWhereInp
     });
   }
 
-  switch (query.filter) {
-    case "budget":
-      and.push({ guest: { lt: 50 } });
-      break;
-    case "authority":
-      and.push({ dr: { gte: 40, lte: 60 } });
-      break;
-    case "traffic":
-      and.push({ traffic: { gte: 10000 } });
-      break;
-    case "India":
-      and.push({ country: "India" });
-      break;
-    case "General":
-      and.push({ niche: "General" });
-      break;
-    case "highDa":
-      and.push({ da: { gte: 50 } });
-      break;
-    default:
-      break;
+  const filterKeys = new Set<string>();
+  if (query.filters?.trim()) {
+    for (const part of query.filters.split(",")) {
+      const key = part.trim();
+      if (key && key !== "all") filterKeys.add(key);
+    }
+  }
+  if (query.filter && query.filter !== "all") {
+    filterKeys.add(query.filter);
+  }
+  for (const key of filterKeys) {
+    applyFilterKey(key, and);
+  }
+
+  if (query.country?.trim()) {
+    and.push({
+      country: { equals: query.country.trim(), mode: "insensitive" },
+    });
+  }
+
+  if (query.niche?.trim()) {
+    and.push({
+      niche: { equals: query.niche.trim(), mode: "insensitive" },
+    });
+  }
+
+  if (query.priceMax !== undefined) {
+    and.push({ guest: { lte: query.priceMax } });
+  }
+
+  if (query.trafficMin !== undefined) {
+    and.push({ traffic: { gte: query.trafficMin } });
+  }
+
+  if (query.daMin !== undefined) {
+    and.push({ da: { gte: query.daMin } });
+  }
+
+  if (query.dr?.trim()) {
+    const range = parseDrRange(query.dr);
+    if (range) {
+      and.push({ dr: range });
+    }
   }
 
   if (and.length > 0) where.AND = and;
@@ -131,6 +193,25 @@ export const marketplaceModel = {
       total,
       page: query.page,
       limit: query.limit,
+    };
+  },
+
+  async getStats() {
+    const [total, countryGroups, dofollowAgg] = await Promise.all([
+      prisma.marketplaceListing.count(),
+      prisma.marketplaceListing.groupBy({
+        by: ["country"],
+        _count: { _all: true },
+      }),
+      prisma.marketplaceListing.aggregate({
+        _max: { maxDofollow: true },
+      }),
+    ]);
+
+    return {
+      total,
+      countries: countryGroups.length,
+      maxDofollow: dofollowAgg._max.maxDofollow ?? 0,
     };
   },
 

@@ -22,3 +22,9 @@ export interface PaginatedListings {
   page: number;
   limit: number;
 }
+
+export interface MarketplaceStatsResponse {
+  total: number;
+  countries: number;
+  maxDofollow: number;
+}

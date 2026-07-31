@@ -29,11 +29,28 @@ export const createListingSchema = z
 
 export const updateListingSchema = createListingSchema.partial().strict();
 
+const filterKeyEnum = z.enum([
+  "all",
+  "budget",
+  "authority",
+  "traffic",
+  "India",
+  "General",
+  "highDa",
+]);
+
 export const listListingsQuerySchema = z.object({
   q: z.string().max(200).optional(),
-  filter: z
-    .enum(["all", "budget", "authority", "traffic", "India", "General", "highDa"])
-    .default("all"),
+  /** @deprecated Prefer composable params / `filters` — kept for backward compatibility */
+  filter: filterKeyEnum.optional(),
+  /** Comma-separated filter keys applied with AND logic */
+  filters: z.string().max(200).optional(),
+  country: z.string().max(120).optional(),
+  niche: z.string().max(120).optional(),
+  dr: z.string().max(20).optional(),
+  priceMax: z.coerce.number().int().nonnegative().optional(),
+  trafficMin: z.coerce.number().int().nonnegative().optional(),
+  daMin: z.coerce.number().int().min(0).max(100).optional(),
   sort: z
     .enum(["recommended", "price", "traffic", "dr", "da"])
     .default("recommended"),
@@ -49,3 +66,4 @@ export const listingIdParamSchema = z.object({
 export type CreateListingInput = z.infer<typeof createListingSchema>;
 export type UpdateListingInput = z.infer<typeof updateListingSchema>;
 export type ListListingsQuery = z.infer<typeof listListingsQuerySchema>;
+export type MarketplaceFilterKey = z.infer<typeof filterKeyEnum>;

@@ -21,6 +21,12 @@ router.get(
 );
 
 router.get(
+  "/stats",
+  marketplaceReadRateLimiter,
+  marketplaceController.getStats,
+);
+
+router.get(
   "/:id",
   marketplaceReadRateLimiter,
   validate(listingIdParamSchema, "params"),
