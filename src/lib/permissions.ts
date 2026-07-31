@@ -6,7 +6,18 @@ export type Permission =
   | "users:read"
   | "users:write"
   | "crm:access"
-  | "orders:manage";
+  | "orders:manage"
+  | "marketplace:write";
+
+const ALL_PERMISSIONS: Permission[] = [
+  "leads:read",
+  "leads:write",
+  "users:read",
+  "users:write",
+  "crm:access",
+  "orders:manage",
+  "marketplace:write",
+];
 
 const rolePermissions: Record<Role, Permission[]> = {
   CUSTOMER: [],
@@ -19,6 +30,7 @@ const rolePermissions: Record<Role, Permission[]> = {
     "users:write",
     "orders:manage",
   ],
+  SUPER_ADMIN: ALL_PERMISSIONS,
 };
 
 export function hasPermission(role: Role, permission: Permission): boolean {
@@ -30,5 +42,9 @@ export function hasRole(role: Role, allowed: Role[]): boolean {
 }
 
 export function canAccessCRM(role: Role): boolean {
-  return hasRole(role, [Role.STAFF, Role.ADMIN]);
+  return hasRole(role, [Role.STAFF, Role.ADMIN, Role.SUPER_ADMIN]);
+}
+
+export function canAccessSuperAdmin(role: Role): boolean {
+  return role === Role.SUPER_ADMIN;
 }

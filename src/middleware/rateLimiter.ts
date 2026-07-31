@@ -32,3 +32,25 @@ export const leadsRateLimiter = rateLimit({
     error: { code: "RATE_LIMIT", message: "Too many submissions, please try again later" },
   },
 });
+
+export const marketplaceReadRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: { code: "RATE_LIMIT", message: "Too many requests, please try again later" },
+  },
+});
+
+export const marketplaceWriteRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: { code: "RATE_LIMIT", message: "Too many write attempts, please try again later" },
+  },
+});

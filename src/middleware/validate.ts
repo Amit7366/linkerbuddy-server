@@ -18,7 +18,13 @@ export function validate(schema: ZodSchema, part: RequestPart = "body") {
       return;
     }
 
-    req[part] = result.data;
+    // Express 5 makes req.query (and sometimes params) read-only getters
+    Object.defineProperty(req, part, {
+      value: result.data,
+      writable: true,
+      configurable: true,
+      enumerable: true,
+    });
     next();
   };
 }

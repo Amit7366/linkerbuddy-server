@@ -49,10 +49,35 @@ model Lead {
   @@index([status])
 }
 
+model MarketplaceListing {
+  id          Int      @id @default(autoincrement())
+  domain      String   @unique
+  niche       String
+  da          Int
+  dr          Int
+  traffic     Int
+  country     String
+  maxDofollow Int
+  guest       Int
+  insert      Int
+  tat         String
+  owner       String
+  trend       String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([niche])
+  @@index([country])
+  @@index([guest])
+  @@index([dr])
+  @@index([da])
+}
+
 enum Role {
   CUSTOMER
   STAFF
   ADMIN
+  SUPER_ADMIN
 }
 
 enum LeadStatus {
