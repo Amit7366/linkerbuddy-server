@@ -34,8 +34,7 @@ export function verifyRefreshToken(token: string): RefreshTokenPayload {
 }
 
 export function getRefreshTokenExpiry(): Date {
-  const days = 7;
   const expiry = new Date();
-  expiry.setDate(expiry.getDate() + days);
+  expiry.setTime(expiry.getTime() + 2 * 60 * 60 * 1000); // 2 hours
   return expiry;
 }

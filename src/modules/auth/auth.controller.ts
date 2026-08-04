@@ -6,8 +6,8 @@ import { env } from "@/config/env.js";
 const REFRESH_COOKIE_OPTIONS = {
   httpOnly: true,
   secure: env.NODE_ENV === "production",
-  sameSite: "strict" as const,
-  maxAge: 7 * 24 * 60 * 60 * 1000,
+  sameSite: "lax" as const,
+  maxAge: 2 * 60 * 60 * 1000, // 2 hours
   path: "/",
 };
 
@@ -19,7 +19,7 @@ function clearRefreshCookie(res: Response): void {
   res.clearCookie(env.REFRESH_COOKIE_NAME, {
     httpOnly: true,
     secure: env.NODE_ENV === "production",
-    sameSite: "strict",
+    sameSite: "lax",
     path: "/",
   });
 }

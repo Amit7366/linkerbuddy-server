@@ -57,6 +57,7 @@ export const authService = {
       email: input.email,
       passwordHash,
       name: input.name,
+      role: "CUSTOMER",
     });
 
     const tokens = await issueTokens(user);

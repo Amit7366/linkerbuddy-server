@@ -15,8 +15,18 @@ model User {
   passwordHash  String
   name          String?
   role          Role           @default(CUSTOMER)
+  phone         String?
+  company       String?
+  addressLine1  String?
+  addressLine2  String?
+  city          String?
+  state         String?
+  postalCode    String?
+  country       String?
   refreshTokens RefreshToken[]
   leads         Lead[]
+  orders        Order[]
+  statusEvents  OrderStatusEvent[] @relation("StatusChangedBy")
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 }
@@ -88,16 +98,93 @@ enum LeadStatus {
   LOST
 }
 
-// ─── Phase 2 (e-commerce) — uncomment and migrate when ready ───────────────
-//
-// model Product { ... }
-// model Category { ... }
-// model Cart { ... }
-// model Order { ... }
-// model Payment { ... }
+// ─── Phase 2 (orders / checkout) ────────────────────────────────────────────
 
-// ─── Phase 3 (CRM) — uncomment and migrate when ready ──────────────────────
-//
-// model Customer { ... }
-// model Deal { ... }
-// model Activity { ... }
+enum OrderStatus {
+  PENDING
+  ACCEPTED
+  PROCESSING
+  SHIPPING
+  DELIVERING
+  COMPLETE
+  FAILED
+  REJECTED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum ServiceType {
+  GUEST
+  INSERT
+}
+
+model Order {
+  id                    String             @id @default(cuid())
+  orderNumber           String             @unique
+  userId                String
+  user                  User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status                OrderStatus        @default(PENDING)
+  paymentStatus         PaymentStatus      @default(UNPAID)
+  stripePaymentIntentId String?            @unique
+  currency              String             @default("usd")
+  subtotalCents         Int
+  totalCents            Int
+  notes                 String?
+  billingName           String
+  billingEmail          String
+  billingPhone          String
+  billingCompany        String?
+  addressLine1          String
+  addressLine2          String?
+  city                  String
+  state                 String
+  postalCode            String
+  country               String
+  items                 OrderItem[]
+  statusEvents          OrderStatusEvent[]
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([paymentStatus])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id             String      @id @default(cuid())
+  orderId        String
+  order          Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  listingId      Int
+  domain         String
+  niche          String
+  serviceType    ServiceType
+  unitPriceCents Int
+  quantity       Int         @default(1)
+  lineTotalCents Int
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@index([orderId])
+  @@index([listingId])
+}
+
+model OrderStatusEvent {
+  id          String       @id @default(cuid())
+  orderId     String
+  order       Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  fromStatus  OrderStatus?
+  toStatus    OrderStatus
+  note        String?
+  changedById String?
+  changedBy   User?        @relation("StatusChangedBy", fields: [changedById], references: [id], onDelete: SetNull)
+  createdAt   DateTime     @default(now())
+
+  @@index([orderId])
+}

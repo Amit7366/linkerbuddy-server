@@ -10,13 +10,18 @@ export const authModel = {
     return prisma.user.findUnique({ where: { id } });
   },
 
-  async createUser(data: { email: string; passwordHash: string; name?: string; role?: Role }) {
+  async createUser(data: {
+    email: string;
+    passwordHash: string;
+    name?: string;
+    role?: Role;
+  }) {
     return prisma.user.create({
       data: {
         email: data.email,
         passwordHash: data.passwordHash,
         name: data.name ?? null,
-        role: data.role,
+        role: data.role ?? "CUSTOMER",
       },
     });
   },

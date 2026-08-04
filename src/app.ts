@@ -5,6 +5,7 @@ import cookieParser from "cookie-parser";
 import { corsOptions } from "@/config/cors.js";
 import { env } from "@/config/env.js";
 import { apiRouter } from "@/routes/index.js";
+import { ordersController } from "@/modules/orders/orders.controller.js";
 import { globalRateLimiter } from "@/middleware/rateLimiter.js";
 import { requestLogger } from "@/middleware/requestLogger.js";
 import { errorHandler, notFound } from "@/middleware/errorHandler.js";
@@ -18,8 +19,18 @@ export function createApp() {
   app.use(requestLogger);
   app.use(helmet());
   app.use(cors(corsOptions));
-  app.use(express.json({ limit: "10kb" }));
-  app.use(express.urlencoded({ extended: true, limit: "10kb" }));
+
+  // Stripe webhook must receive the raw body (before JSON parser)
+  app.post(
+    "/api/v1/orders/webhook/stripe",
+    express.raw({ type: "application/json" }),
+    (req, res, next) => {
+      void ordersController.stripeWebhook(req, res, next);
+    },
+  );
+
+  app.use(express.json({ limit: "100kb" }));
+  app.use(express.urlencoded({ extended: true, limit: "100kb" }));
   app.use(cookieParser());
   app.use(globalRateLimiter);
 
