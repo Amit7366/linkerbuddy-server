@@ -1,5 +1,4 @@
 import { authModel } from "@/modules/auth/auth.model.js";
-import { compareToken } from "@/lib/password.js";
 import { verifyRefreshToken } from "@/lib/jwt.js";
 import { AppError } from "@/utils/appError.js";
 import type { AuthTokensResponse, AuthUserResponse, LoginInput, RegisterInput } from "./auth.types.js";
@@ -79,6 +78,8 @@ export const authService = {
       throw new AppError("Invalid email or password", 401, "INVALID_CREDENTIALS");
     }
 
+    // Drop prior refresh rows (incl. legacy bcrypt) so they can't poison lookup
+    await authModel.deleteRefreshTokensByUserId(user.id);
     const tokens = await issueTokens(user);
     return {
       user: toAuthUser(user),
@@ -88,25 +89,19 @@ export const authService = {
   },
 
   async refresh(refreshToken: string): Promise<AuthTokensResponse & { refreshToken: string }> {
-    let payload;
     try {
-      payload = verifyRefreshToken(refreshToken);
+      verifyRefreshToken(refreshToken);
     } catch {
       throw new AppError("Invalid refresh token", 401, "INVALID_REFRESH_TOKEN");
     }
 
-    const allTokens = await authModel.findRefreshTokensByUserId(payload.sub);
-    let matchedToken = null;
-
-    for (const token of allTokens) {
-      const isMatch = await compareToken(refreshToken, token.tokenHash);
-      if (isMatch) {
-        matchedToken = token;
-        break;
-      }
-    }
+    const tokenHash = await hashToken(refreshToken);
+    const matchedToken = await authModel.findRefreshTokenByHash(tokenHash);
 
     if (!matchedToken || matchedToken.expiresAt < new Date()) {
+      if (matchedToken) {
+        await authModel.deleteRefreshToken(matchedToken.id).catch(() => null);
+      }
       throw new AppError("Invalid or expired refresh token", 401, "INVALID_REFRESH_TOKEN");
     }
 
@@ -125,15 +120,11 @@ export const authService = {
     if (!refreshToken) return;
 
     try {
-      const payload = verifyRefreshToken(refreshToken);
-      const allTokens = await authModel.findRefreshTokensByUserId(payload.sub);
-
-      for (const token of allTokens) {
-        const isMatch = await compareToken(refreshToken, token.tokenHash);
-        if (isMatch) {
-          await authModel.deleteRefreshToken(token.id);
-          break;
-        }
+      verifyRefreshToken(refreshToken);
+      const tokenHash = await hashToken(refreshToken);
+      const matched = await authModel.findRefreshTokenByHash(tokenHash);
+      if (matched) {
+        await authModel.deleteRefreshToken(matched.id);
       }
     } catch {
       // Ignore invalid tokens on logout

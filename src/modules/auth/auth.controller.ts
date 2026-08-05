@@ -60,7 +60,11 @@ export const authController = {
 
   async refresh(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const refreshToken = req.cookies?.[env.REFRESH_COOKIE_NAME] as string | undefined;
+      const bodyToken =
+        typeof req.body?.refreshToken === "string" ? req.body.refreshToken : undefined;
+      const cookieToken = req.cookies?.[env.REFRESH_COOKIE_NAME] as string | undefined;
+      const refreshToken = bodyToken || cookieToken;
+
       if (!refreshToken) {
         res.status(401).json({
           success: false,
