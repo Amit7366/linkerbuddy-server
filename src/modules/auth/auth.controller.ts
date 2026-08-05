@@ -29,10 +29,12 @@ export const authController = {
     try {
       const result = await authService.register(req.body);
       setRefreshCookie(res, result.refreshToken);
+      // refreshToken is also in the body so the Next.js BFF can set it on the app domain
       res.status(201).json(
         successResponse({
           user: result.user,
           accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
         }),
       );
     } catch (error) {
@@ -48,6 +50,7 @@ export const authController = {
         successResponse({
           user: result.user,
           accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
         }),
       );
     } catch (error) {
@@ -72,6 +75,7 @@ export const authController = {
         successResponse({
           user: result.user,
           accessToken: result.accessToken,
+          refreshToken: result.refreshToken,
         }),
       );
     } catch (error) {
