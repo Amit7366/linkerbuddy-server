@@ -26,6 +26,7 @@ model User {
   refreshTokens RefreshToken[]
   leads         Lead[]
   orders        Order[]
+  reviews       Review[]
   statusEvents  OrderStatusEvent[] @relation("StatusChangedBy")
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
@@ -148,6 +149,7 @@ model Order {
   country               String
   items                 OrderItem[]
   statusEvents          OrderStatusEvent[]
+  review                Review?
   createdAt             DateTime           @default(now())
   updatedAt             DateTime           @updatedAt
 
@@ -155,6 +157,23 @@ model Order {
   @@index([status])
   @@index([paymentStatus])
   @@index([createdAt])
+}
+
+model Review {
+  id          String   @id @default(cuid())
+  orderId     String   @unique
+  order       Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rating      Int
+  description String
+  showOnHome  Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([showOnHome])
 }
 
 model OrderItem {

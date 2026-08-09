@@ -7,7 +7,8 @@ export type Permission =
   | "users:write"
   | "crm:access"
   | "orders:manage"
-  | "marketplace:write";
+  | "marketplace:write"
+  | "reviews:manage";
 
 const ALL_PERMISSIONS: Permission[] = [
   "leads:read",
@@ -17,6 +18,7 @@ const ALL_PERMISSIONS: Permission[] = [
   "crm:access",
   "orders:manage",
   "marketplace:write",
+  "reviews:manage",
 ];
 
 const rolePermissions: Record<Role, Permission[]> = {

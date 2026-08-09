@@ -54,3 +54,25 @@ export const marketplaceWriteRateLimiter = rateLimit({
     error: { code: "RATE_LIMIT", message: "Too many write attempts, please try again later" },
   },
 });
+
+export const reviewsReadRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: { code: "RATE_LIMIT", message: "Too many requests, please try again later" },
+  },
+});
+
+export const reviewsWriteRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: { code: "RATE_LIMIT", message: "Too many review submissions, please try again later" },
+  },
+});
