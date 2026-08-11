@@ -170,20 +170,57 @@ function buildOrderBy(
     case "da":
       return [{ da: "desc" }, { id: "asc" }];
     default:
-      return [{ id: "asc" }];
+      // Handled by compareRecommended — fallback only
+      return [{ traffic: "desc" }, { id: "asc" }];
   }
+}
+
+/** USA → UK → India → other countries; highest traffic first within each group. */
+function countryPriority(country: string): number {
+  const key = country.trim().toLowerCase();
+  if (key === "usa" || key === "us" || key === "united states") return 0;
+  if (key === "uk" || key === "gb" || key === "united kingdom") return 1;
+  if (key === "india" || key === "in") return 2;
+  return 3;
+}
+
+function compareRecommended<
+  T extends { country: string; traffic: number; id: number },
+>(a: T, b: T): number {
+  const byCountry = countryPriority(a.country) - countryPriority(b.country);
+  if (byCountry !== 0) return byCountry;
+  if (b.traffic !== a.traffic) return b.traffic - a.traffic;
+  return a.id - b.id;
 }
 
 export const marketplaceModel = {
   async findMany(query: ListListingsQuery) {
     const where = buildWhere(query);
     const skip = (query.page - 1) * query.limit;
+    const sort = query.sort ?? "recommended";
+
+    // Default marketplace order: USA → UK → India → others, then traffic desc.
+    // Applied in memory so country priority works correctly with pagination.
+    if (sort === "recommended") {
+      const [rows, total] = await Promise.all([
+        prisma.marketplaceListing.findMany({ where }),
+        prisma.marketplaceListing.count({ where }),
+      ]);
+      const sorted = [...rows].sort(compareRecommended);
+      return {
+        listings: sorted.slice(skip, skip + query.limit).map(toResponse),
+        total,
+        page: query.page,
+        limit: query.limit,
+      };
+    }
+
     const [rows, total] = await Promise.all([
       prisma.marketplaceListing.findMany({
         where,
         skip,
         take: query.limit,
-        orderBy: buildOrderBy(query.sort),
+        orderBy: buildOrderBy(sort),
       }),
       prisma.marketplaceListing.count({ where }),
     ]);
