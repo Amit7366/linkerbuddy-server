@@ -138,12 +138,22 @@ function buildWhere(query: ListListingsQuery): Prisma.MarketplaceListingWhereInp
     and.push({ guest: { lte: query.priceMax } });
   }
 
-  if (query.trafficMin !== undefined) {
-    and.push({ traffic: { gte: query.trafficMin } });
+  if (query.priceMin !== undefined) {
+    and.push({ guest: { gte: query.priceMin } });
   }
 
-  if (query.daMin !== undefined) {
-    and.push({ da: { gte: query.daMin } });
+  const trafficFilter: { gte?: number; lte?: number } = {};
+  if (query.trafficMin !== undefined) trafficFilter.gte = query.trafficMin;
+  if (query.trafficMax !== undefined) trafficFilter.lte = query.trafficMax;
+  if (trafficFilter.gte !== undefined || trafficFilter.lte !== undefined) {
+    and.push({ traffic: trafficFilter });
+  }
+
+  const daFilter: { gte?: number; lte?: number } = {};
+  if (query.daMin !== undefined) daFilter.gte = query.daMin;
+  if (query.daMax !== undefined) daFilter.lte = query.daMax;
+  if (daFilter.gte !== undefined || daFilter.lte !== undefined) {
+    and.push({ da: daFilter });
   }
 
   if (query.dr?.trim()) {
@@ -249,6 +259,26 @@ export const marketplaceModel = {
       total,
       countries: countryGroups.length,
       maxDofollow: dofollowAgg._max.maxDofollow ?? 0,
+    };
+  },
+
+  async getFacets() {
+    const [countries, niches] = await Promise.all([
+      prisma.marketplaceListing.groupBy({
+        by: ["country"],
+        _count: { _all: true },
+        orderBy: { country: "asc" },
+      }),
+      prisma.marketplaceListing.groupBy({
+        by: ["niche"],
+        _count: { _all: true },
+        orderBy: { niche: "asc" },
+      }),
+    ]);
+
+    return {
+      countries: countries.map((row) => row.country),
+      niches: niches.map((row) => row.niche),
     };
   },
 

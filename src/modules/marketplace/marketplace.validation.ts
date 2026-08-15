@@ -51,6 +51,9 @@ export const listListingsQuerySchema = z.object({
   priceMax: z.coerce.number().int().nonnegative().optional(),
   trafficMin: z.coerce.number().int().nonnegative().optional(),
   daMin: z.coerce.number().int().min(0).max(100).optional(),
+  daMax: z.coerce.number().int().min(0).max(100).optional(),
+  trafficMax: z.coerce.number().int().nonnegative().optional(),
+  priceMin: z.coerce.number().int().nonnegative().optional(),
   sort: z
     .enum(["recommended", "price", "traffic", "dr", "da"])
     .default("recommended"),

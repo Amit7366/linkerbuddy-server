@@ -16,6 +16,10 @@ export const marketplaceService = {
     return marketplaceModel.getStats();
   },
 
+  async getFacets() {
+    return marketplaceModel.getFacets();
+  },
+
   async getById(id: number) {
     const listing = await marketplaceModel.findById(id);
     if (!listing) {

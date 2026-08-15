@@ -147,6 +147,19 @@ async function main() {
     console.log(`Marketplace listings already present (${listingCount}), skipping`);
   }
 
+  const availabilityCount = await prisma.availabilityRule.count();
+  if (availabilityCount === 0) {
+    await prisma.availabilityRule.createMany({
+      data: [1, 2, 3, 4, 5].map((dayOfWeek) => ({
+        dayOfWeek,
+        startTime: "10:00",
+        endTime: "18:00",
+        timezone: "Asia/Dhaka",
+      })),
+    });
+    console.log("Seeded Mon–Fri 10:00–18:00 Asia/Dhaka availability");
+  }
+
   const customerHash = await bcrypt.hash("Customer123!", 12);
   const reviewers = [];
   for (const reviewer of SEED_REVIEWERS) {

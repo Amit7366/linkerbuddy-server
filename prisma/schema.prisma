@@ -25,6 +25,7 @@ model User {
   country       String?
   refreshTokens RefreshToken[]
   leads         Lead[]
+  leadReplies   LeadReply[]        @relation("LeadReplySentBy")
   orders        Order[]
   reviews       Review[]
   statusEvents  OrderStatusEvent[] @relation("StatusChangedBy")
@@ -44,20 +45,95 @@ model RefreshToken {
 }
 
 model Lead {
-  id        String     @id @default(cuid())
-  name      String
-  email     String
-  phone     String?
-  message   String?
-  source    String     @default("contact_form")
-  status    LeadStatus @default(NEW)
-  userId    String?
-  user      User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
-  createdAt DateTime   @default(now())
-  updatedAt DateTime   @updatedAt
+  id                String          @id @default(cuid())
+  name              String
+  email             String
+  phone             String?
+  subject           String?
+  message           String?
+  company           String?
+  website           String?
+  monthlyBudget     String?
+  purpose           String?
+  highValue         Boolean         @default(false)
+  privacyAcceptedAt DateTime?
+  source            String          @default("contact_form")
+  status            LeadStatus      @default(NEW)
+  userId            String?
+  user              User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  replies           LeadReply[]
+  scheduledCalls    ScheduledCall[]
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
 
   @@index([email])
   @@index([status])
+  @@index([highValue])
+  @@index([source])
+}
+
+model LeadReply {
+  id        String   @id @default(cuid())
+  leadId    String
+  lead      Lead     @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  subject   String
+  body      String
+  sentById  String?
+  sentBy    User?    @relation("LeadReplySentBy", fields: [sentById], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+
+  @@index([leadId])
+}
+
+enum CallChannel {
+  MEET
+  WHATSAPP
+  PHONE
+}
+
+enum CallStatus {
+  SCHEDULED
+  COMPLETED
+  CANCELLED
+  NO_SHOW
+}
+
+model ScheduledCall {
+  id          String      @id @default(cuid())
+  leadId      String
+  lead        Lead        @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  startsAt    DateTime
+  endsAt      DateTime
+  timezone    String
+  durationMin Int         @default(30)
+  channel     CallChannel
+  meetingUrl  String?
+  status      CallStatus  @default(SCHEDULED)
+  manageToken String      @unique
+  notes       String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([startsAt])
+  @@index([status])
+  @@index([leadId])
+}
+
+model AvailabilityRule {
+  id        String @id @default(cuid())
+  dayOfWeek Int
+  startTime String
+  endTime   String
+  timezone  String @default("Asia/Dhaka")
+
+  @@unique([dayOfWeek])
+}
+
+model AvailabilityBlock {
+  id        String   @id @default(cuid())
+  startsAt  DateTime
+  endsAt    DateTime
+  reason    String?
 }
 
 model MarketplaceListing {

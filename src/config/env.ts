@@ -15,6 +15,13 @@ const envSchema = z.object({
   REFRESH_COOKIE_NAME: z.string().default("refreshToken"),
   STRIPE_SECRET_KEY: z.string().optional().default(""),
   STRIPE_WEBHOOK_SECRET: z.string().optional().default(""),
+  SMTP_HOST: z.string().default("smtp.gmail.com"),
+  SMTP_PORT: z.coerce.number().default(587),
+  SMTP_USER: z.string().optional().default(""),
+  SMTP_PASS: z.string().optional().default(""),
+  SMTP_FROM: z.string().optional().default(""),
+  NOTIFY_EMAIL: z.string().email().optional().default("omit9090@gmail.com"),
+  DEFAULT_MEET_URL: z.string().optional().default(""),
 });
 
 export type Env = z.infer<typeof envSchema>;

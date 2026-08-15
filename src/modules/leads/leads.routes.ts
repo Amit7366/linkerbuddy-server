@@ -1,6 +1,12 @@
 import { Router } from "express";
 import { leadsController } from "./leads.controller.js";
-import { createLeadSchema, listLeadsQuerySchema } from "./leads.validation.js";
+import {
+  createLeadSchema,
+  leadIdParamSchema,
+  listLeadsQuerySchema,
+  replyLeadSchema,
+  updateLeadSchema,
+} from "./leads.validation.js";
 import { validate } from "@/middleware/validate.js";
 import { optionalAuthenticate, authenticate } from "@/middleware/authenticate.js";
 import { authorizePermission } from "@/middleware/authorize.js";
@@ -22,6 +28,32 @@ router.get(
   authorizePermission("leads:read"),
   validate(listLeadsQuerySchema, "query"),
   leadsController.list,
+);
+
+router.get(
+  "/:id",
+  authenticate,
+  authorizePermission("leads:read"),
+  validate(leadIdParamSchema, "params"),
+  leadsController.get,
+);
+
+router.patch(
+  "/:id",
+  authenticate,
+  authorizePermission("leads:write"),
+  validate(leadIdParamSchema, "params"),
+  validate(updateLeadSchema),
+  leadsController.update,
+);
+
+router.post(
+  "/:id/reply",
+  authenticate,
+  authorizePermission("leads:write"),
+  validate(leadIdParamSchema, "params"),
+  validate(replyLeadSchema),
+  leadsController.reply,
 );
 
 export { router as leadsRouter };

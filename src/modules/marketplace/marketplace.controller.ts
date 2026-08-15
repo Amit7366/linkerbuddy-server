@@ -23,6 +23,15 @@ export const marketplaceController = {
     }
   },
 
+  async getFacets(_req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const facets = await marketplaceService.getFacets();
+      res.json(successResponse(facets));
+    } catch (error) {
+      next(error);
+    }
+  },
+
   async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const id = Number(req.params.id);
