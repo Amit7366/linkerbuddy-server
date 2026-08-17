@@ -5,7 +5,8 @@ import { env } from "@/config/env.js";
 import { companyContact } from "@/config/company.js";
 import { prisma } from "@/lib/prisma.js";
 import { buildCallIcs } from "@/lib/ics.js";
-import { formatLeadNotifyText, sendNotifyEmail } from "@/lib/mailer.js";
+import { calendarInviteAttachment, sendClientAndBusinessEmails } from "@/lib/mailer.js";
+import { callClientEmail, callInternalEmail } from "@/lib/email-templates.js";
 import { addMinutes, formatInZone } from "@/lib/timezone.js";
 import { isHighValueLead } from "./calls.constants.js";
 import {
@@ -161,31 +162,40 @@ export const callsService = {
       return updated;
     });
 
-    void sendNotifyEmail({
-      subject: `[Linkerbuddy] Call booked with ${created.lead.name}`,
-      text: formatLeadNotifyText({
-        kind: "call",
-        name: created.lead.name,
-        email: created.lead.email,
-        phone: created.lead.phone,
-        subject: created.lead.subject,
-        message: created.notes,
-        company: created.lead.company,
-        website: created.lead.website,
-        monthlyBudget: created.lead.monthlyBudget
-          ? BUDGET_LABELS[created.lead.monthlyBudget]
-          : created.lead.monthlyBudget,
-        purpose: created.lead.purpose ? PURPOSE_LABELS[created.lead.purpose] : created.lead.purpose,
-        startsAt: created.startsAt,
-        timezone: created.timezone,
-        channel: CHANNEL_LABELS[created.channel] ?? created.channel,
-        crmPath: `/crm/calls`,
-      }),
+    const ics = icsForCall(created);
+    const inquiry = {
+      name: created.lead.name,
+      email: created.lead.email,
+      phone: created.lead.phone,
+      subject: created.lead.subject,
+      message: created.notes,
+      company: created.lead.company,
+      website: created.lead.website,
+      monthlyBudget: created.lead.monthlyBudget
+        ? BUDGET_LABELS[created.lead.monthlyBudget] ?? created.lead.monthlyBudget
+        : created.lead.monthlyBudget,
+      purpose: created.lead.purpose
+        ? PURPOSE_LABELS[created.lead.purpose] ?? created.lead.purpose
+        : created.lead.purpose,
+      highValue: created.lead.highValue,
+      startsAt: created.startsAt,
+      timezone: created.timezone,
+      channel: CHANNEL_LABELS[created.channel] ?? created.channel,
+      meetingUrl: created.meetingUrl,
+      manageToken: created.manageToken,
+      durationMin: created.durationMin,
+    };
+
+    void sendClientAndBusinessEmails({
+      clientEmail: created.lead.email,
+      client: callClientEmail(inquiry),
+      business: callInternalEmail({ ...inquiry, crmPath: "/crm/calls" }),
+      attachments: [calendarInviteAttachment(ics)],
     });
 
     return {
       ...created,
-      ics: icsForCall(created),
+      ics,
       localTime: formatInZone(created.startsAt, created.timezone),
     };
   },

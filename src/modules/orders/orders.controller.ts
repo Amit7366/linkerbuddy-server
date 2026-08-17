@@ -40,6 +40,7 @@ export const ordersController = {
   },
 
   async confirmPayment(req: Request, res: Response, next: NextFunction): Promise<void> {
+    // PAYMENT DISABLED — restore with Stripe checkout step 2.
     try {
       const data = await ordersService.confirmPaymentFromClient(
         req.user!.sub,

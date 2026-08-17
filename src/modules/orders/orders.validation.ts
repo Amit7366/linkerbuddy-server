@@ -89,6 +89,8 @@ export const updateOrderSchema = z.object({
   country: z.string().min(2).max(100).optional(),
   notes: z.string().max(2000).optional().nullable(),
   items: z.array(updateOrderItemSchema).min(1).optional(),
+  promoCode: z.string().max(40).optional().nullable(),
+  manualTotalCents: z.coerce.number().int().min(0).optional().nullable(),
 });
 
 export const updateProfileSchema = z.object({

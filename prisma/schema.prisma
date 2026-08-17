@@ -201,6 +201,32 @@ enum ServiceType {
   INSERT
 }
 
+enum PromoDiscountType {
+  PERCENT
+  FIXED
+}
+
+model PromoCode {
+  id               String             @id @default(cuid())
+  code             String             @unique
+  description      String?
+  type             PromoDiscountType
+  /// PERCENT: 1–100. FIXED: amount in cents.
+  value            Int
+  minOrderCents    Int                @default(0)
+  maxDiscountCents Int?
+  maxUses          Int?
+  usedCount        Int                @default(0)
+  startsAt         DateTime?
+  endsAt           DateTime?
+  active           Boolean            @default(true)
+  orders           Order[]
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  @@index([active])
+}
+
 model Order {
   id                    String             @id @default(cuid())
   orderNumber           String             @unique
@@ -211,7 +237,12 @@ model Order {
   stripePaymentIntentId String?            @unique
   currency              String             @default("usd")
   subtotalCents         Int
+  discountCents         Int                @default(0)
   totalCents            Int
+  promoCodeId           String?
+  promoCode             PromoCode?         @relation(fields: [promoCodeId], references: [id], onDelete: SetNull)
+  promoCodeLabel        String?
+  manualTotalCents      Int?
   notes                 String?
   billingName           String
   billingEmail          String

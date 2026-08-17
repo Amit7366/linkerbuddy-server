@@ -6,6 +6,7 @@ const orderInclude = {
   items: { orderBy: { createdAt: "asc" as const } },
   statusEvents: { orderBy: { createdAt: "asc" as const } },
   user: { select: { id: true, email: true, name: true } },
+  promoCode: true,
 } satisfies Prisma.OrderInclude;
 
 export const ordersModel = {

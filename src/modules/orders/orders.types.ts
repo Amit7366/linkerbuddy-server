@@ -28,7 +28,11 @@ export type OrderDto = {
   paymentStatus: PaymentStatus;
   currency: string;
   subtotalCents: number;
+  discountCents: number;
   totalCents: number;
+  promoCodeId: string | null;
+  promoCodeLabel: string | null;
+  manualTotalCents: number | null;
   notes: string | null;
   billingName: string;
   billingEmail: string;

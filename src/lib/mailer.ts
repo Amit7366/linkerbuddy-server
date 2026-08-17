@@ -1,6 +1,7 @@
 import nodemailer from "nodemailer";
 import { env } from "@/config/env.js";
 import { logger } from "@/lib/logger.js";
+import type { RenderedEmail } from "@/lib/email-templates.js";
 
 const fromAddress =
   env.SMTP_FROM ||
@@ -26,12 +27,19 @@ function getTransport() {
   });
 }
 
+export type MailAttachment = {
+  filename: string;
+  content: string | Buffer;
+  contentType?: string;
+};
+
 export async function sendMail(options: {
   to: string;
   subject: string;
   text: string;
   html?: string;
   replyTo?: string;
+  attachments?: MailAttachment[];
 }) {
   const transport = getTransport();
   if (!transport) {
@@ -45,79 +53,60 @@ export async function sendMail(options: {
     text: options.text,
     html: options.html ?? options.text.replace(/\n/g, "<br />"),
     replyTo: options.replyTo,
+    attachments: options.attachments,
   });
 }
 
-export async function sendNotifyEmail(options: { subject: string; text: string }) {
+export async function sendQuietMail(options: Parameters<typeof sendMail>[0]) {
   if (!isMailerConfigured()) {
-    logger.warn("SMTP not configured; skipping notify email");
-    return;
+    logger.warn({ to: options.to, subject: options.subject }, "SMTP not configured; skipping email");
+    return false;
   }
 
   try {
-    await sendMail({
-      to: env.NOTIFY_EMAIL,
-      subject: options.subject,
-      text: options.text,
-    });
+    await sendMail(options);
+    return true;
   } catch (error) {
-    logger.error({ err: error }, "Failed to send notify email");
+    logger.error({ err: error, to: options.to, subject: options.subject }, "Failed to send email");
+    return false;
   }
 }
 
-function escapeHtml(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
-}
-
-export function formatLeadNotifyText(input: {
-  kind: "contact" | "call";
-  name: string;
-  email: string;
-  phone?: string | null;
-  subject?: string | null;
-  message?: string | null;
-  company?: string | null;
-  website?: string | null;
-  monthlyBudget?: string | null;
-  purpose?: string | null;
-  startsAt?: Date | null;
-  timezone?: string | null;
-  channel?: string | null;
-  crmPath: string;
+/** Client-facing copy plus an internal copy to the business inbox. */
+export async function sendClientAndBusinessEmails(input: {
+  clientEmail: string;
+  client: RenderedEmail;
+  business: RenderedEmail;
+  clientReplyTo?: string;
+  businessReplyTo?: string;
+  attachments?: MailAttachment[];
 }) {
-  const lines = [
-    input.kind === "call" ? "A new strategy call was booked." : "A new contact form was submitted.",
-    "",
-    `Name: ${input.name}`,
-    `Email: ${input.email}`,
-    `Phone: ${input.phone || "—"}`,
-    `Subject: ${input.subject || "—"}`,
-    `Company: ${input.company || "—"}`,
-    `Website: ${input.website || "—"}`,
-    `Budget: ${input.monthlyBudget || "—"}`,
-    `Purpose: ${input.purpose || "—"}`,
-  ];
+  const businessTo = env.NOTIFY_EMAIL;
+  const clientReplyTo = input.clientReplyTo || businessTo;
 
-  if (input.kind === "call") {
-    lines.push(
-      `Call time (UTC): ${input.startsAt?.toISOString() ?? "—"}`,
-      `Timezone: ${input.timezone || "—"}`,
-      `Channel: ${input.channel || "—"}`,
-    );
-  }
+  await sendQuietMail({
+    to: input.clientEmail,
+    subject: input.client.subject,
+    text: input.client.text,
+    html: input.client.html,
+    replyTo: clientReplyTo,
+    attachments: input.attachments,
+  });
 
-  if (input.message) {
-    lines.push("", "Message:", input.message);
-  }
-
-  lines.push("", `Open in CRM: ${env.CLIENT_URL}${input.crmPath}`);
-  return lines.join("\n");
+  await sendQuietMail({
+    to: businessTo,
+    subject: input.business.subject,
+    text: input.business.text,
+    html: input.business.html,
+    replyTo: input.businessReplyTo || input.clientEmail,
+    attachments: input.attachments,
+  });
 }
 
-export function formatReplyHtml(body: string) {
-  return `<p style="font-family:sans-serif;white-space:pre-wrap">${escapeHtml(body)}</p>`;
+export function calendarInviteAttachment(ics: string): MailAttachment {
+  return {
+    filename: "linkerbuddy-strategy-call.ics",
+    content: ics,
+    contentType: "text/calendar; charset=UTF-8",
+  };
 }

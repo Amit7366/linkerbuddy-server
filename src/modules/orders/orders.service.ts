@@ -3,6 +3,13 @@ import type { OrderStatus, ServiceType } from "@prisma/client";
 import { prisma } from "@/lib/prisma.js";
 import { getStripe } from "@/lib/stripe.js";
 import { AppError } from "@/utils/appError.js";
+import { sendClientAndBusinessEmails } from "@/lib/mailer.js";
+import { orderClientEmail, orderInternalEmail } from "@/lib/email-templates.js";
+import { promosModel } from "@/modules/promos/promos.model.js";
+import {
+  assertPromoUsable,
+  computePromoDiscount,
+} from "@/modules/promos/promos.service.js";
 import { ordersModel } from "./orders.model.js";
 import type {
   CheckoutIntentInput,
@@ -118,32 +125,68 @@ export const ordersService = {
       },
     });
 
-    const stripe = getStripe();
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: subtotalCents,
-      currency: "usd",
-      automatic_payment_methods: { enabled: true },
-      metadata: {
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-        userId,
-      },
-      receipt_email: billing.billingEmail,
-    });
+    // --- Stripe payment (checkout step 2) — temporarily disabled ---
+    // Restore this block to create a PaymentIntent and return clientSecret.
+    // const stripe = getStripe();
+    // const paymentIntent = await stripe.paymentIntents.create({
+    //   amount: subtotalCents,
+    //   currency: "usd",
+    //   automatic_payment_methods: { enabled: true },
+    //   metadata: {
+    //     orderId: order.id,
+    //     orderNumber: order.orderNumber,
+    //     userId,
+    //   },
+    //   receipt_email: billing.billingEmail,
+    // });
+    //
+    // await ordersModel.updatePayment(order.id, {
+    //   paymentStatus: "UNPAID",
+    //   stripePaymentIntentId: paymentIntent.id,
+    // });
+    //
+    // if (!paymentIntent.client_secret) {
+    //   throw new AppError("Failed to create payment", 500, "STRIPE_ERROR");
+    // }
+    //
+    // return {
+    //   orderId: order.id,
+    //   orderNumber: order.orderNumber,
+    //   clientSecret: paymentIntent.client_secret,
+    //   totalCents: subtotalCents,
+    //   currency: "usd",
+    // };
 
-    await ordersModel.updatePayment(order.id, {
-      paymentStatus: "UNPAID",
-      stripePaymentIntentId: paymentIntent.id,
-    });
+    const orderFields = {
+      orderNumber: order.orderNumber,
+      billingName: order.billingName,
+      billingEmail: order.billingEmail,
+      billingPhone: order.billingPhone,
+      billingCompany: order.billingCompany,
+      addressLine1: order.addressLine1,
+      addressLine2: order.addressLine2,
+      city: order.city,
+      state: order.state,
+      postalCode: order.postalCode,
+      country: order.country,
+      notes: order.notes,
+      paymentStatus: order.paymentStatus,
+      status: order.status,
+      totalCents: order.totalCents,
+      currency: order.currency,
+      items: order.items,
+    };
 
-    if (!paymentIntent.client_secret) {
-      throw new AppError("Failed to create payment", 500, "STRIPE_ERROR");
-    }
+    void sendClientAndBusinessEmails({
+      clientEmail: order.billingEmail,
+      client: orderClientEmail(orderFields),
+      business: orderInternalEmail(orderFields),
+    });
 
     return {
       orderId: order.id,
       orderNumber: order.orderNumber,
-      clientSecret: paymentIntent.client_secret,
+      clientSecret: "",
       totalCents: subtotalCents,
       currency: "usd",
     };
@@ -294,6 +337,54 @@ export const ordersService = {
       subtotalCents = replaceItems.reduce((sum, i) => sum + i.lineTotalCents, 0);
     }
 
+    let nextPromo = order.promoCode ?? null;
+    if (input.promoCode !== undefined) {
+      const raw = input.promoCode?.trim();
+      if (!raw) {
+        nextPromo = null;
+      } else {
+        const found = await promosModel.findByCode(raw);
+        if (!found) {
+          throw new AppError("Promo code not found", 404, "PROMO_NOT_FOUND");
+        }
+        nextPromo = found;
+      }
+    }
+
+    if (nextPromo) {
+      try {
+        assertPromoUsable(nextPromo, nextPromo.id === order.promoCodeId);
+        computePromoDiscount(subtotalCents, nextPromo);
+      } catch (error) {
+        if (input.promoCode !== undefined) throw error;
+        nextPromo = null;
+      }
+    }
+
+    const discountCents = nextPromo ? computePromoDiscount(subtotalCents, nextPromo) : 0;
+    const discountedTotal = Math.max(0, subtotalCents - discountCents);
+
+    let manualTotalCents =
+      input.manualTotalCents !== undefined
+        ? input.manualTotalCents
+        : order.manualTotalCents;
+
+    if (manualTotalCents != null && manualTotalCents > subtotalCents) {
+      throw new AppError(
+        "Manual total cannot exceed the order subtotal",
+        400,
+        "INVALID_TOTAL",
+      );
+    }
+
+    const totalCents =
+      manualTotalCents != null ? manualTotalCents : discountedTotal;
+
+    if (nextPromo?.id !== order.promoCodeId) {
+      if (order.promoCodeId) await promosModel.decrementUsed(order.promoCodeId);
+      if (nextPromo) await promosModel.incrementUsed(nextPromo.id);
+    }
+
     return ordersModel.updateOrder(
       id,
       {
@@ -308,9 +399,14 @@ export const ordersService = {
         ...(input.postalCode !== undefined ? { postalCode: input.postalCode } : {}),
         ...(input.country !== undefined ? { country: input.country } : {}),
         ...(input.notes !== undefined ? { notes: input.notes } : {}),
-        ...(replaceItems
-          ? { subtotalCents, totalCents: subtotalCents }
-          : {}),
+        subtotalCents,
+        discountCents,
+        totalCents,
+        manualTotalCents,
+        promoCodeLabel: nextPromo?.code ?? null,
+        promoCode: nextPromo
+          ? { connect: { id: nextPromo.id } }
+          : { disconnect: true },
       },
       replaceItems,
     );

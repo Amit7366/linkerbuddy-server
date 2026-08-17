@@ -269,6 +269,82 @@ async function main() {
     );
   }
 
+  const promoSeeds = [
+    {
+      code: "WELCOME10",
+      description: "10% off any first campaign",
+      type: "PERCENT" as const,
+      value: 10,
+      minOrderCents: 0,
+      maxDiscountCents: null,
+      maxUses: null,
+      active: true,
+      endsAt: null,
+    },
+    {
+      code: "SAVE25",
+      description: "$25 off orders of $100+",
+      type: "FIXED" as const,
+      value: 2500,
+      minOrderCents: 10000,
+      maxDiscountCents: null,
+      maxUses: null,
+      active: true,
+      endsAt: null,
+    },
+    {
+      code: "AGENCY15",
+      description: "15% agency discount, capped at $200",
+      type: "PERCENT" as const,
+      value: 15,
+      minOrderCents: 20000,
+      maxDiscountCents: 20000,
+      maxUses: null,
+      active: true,
+      endsAt: null,
+    },
+    {
+      code: "FLASH50",
+      description: "50% flash sale — limited uses",
+      type: "PERCENT" as const,
+      value: 50,
+      minOrderCents: 0,
+      maxDiscountCents: 15000,
+      maxUses: 25,
+      active: true,
+      endsAt: new Date(Date.now() + 60 * 86_400_000),
+    },
+    {
+      code: "RETENTION20",
+      description: "$20 loyalty credit",
+      type: "FIXED" as const,
+      value: 2000,
+      minOrderCents: 5000,
+      maxDiscountCents: null,
+      maxUses: 100,
+      active: true,
+      endsAt: null,
+    },
+  ];
+
+  for (const promo of promoSeeds) {
+    await prisma.promoCode.upsert({
+      where: { code: promo.code },
+      update: {
+        description: promo.description,
+        type: promo.type,
+        value: promo.value,
+        minOrderCents: promo.minOrderCents,
+        maxDiscountCents: promo.maxDiscountCents,
+        maxUses: promo.maxUses,
+        active: promo.active,
+        endsAt: promo.endsAt,
+      },
+      create: promo,
+    });
+  }
+  console.log(`Seeded ${promoSeeds.length} promo codes`);
+
   console.log("Seed completed:");
   console.log("  admin@example.com / Admin123! (ADMIN)");
   console.log("  superadmin@example.com / SuperAdmin123! (SUPER_ADMIN)");

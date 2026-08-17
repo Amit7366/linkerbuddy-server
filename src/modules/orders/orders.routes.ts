@@ -36,12 +36,13 @@ router.get(
   ordersController.getMine,
 );
 
-router.post(
-  "/me/:id/confirm-payment",
-  authenticate,
-  validate(orderIdParamSchema, "params"),
-  ordersController.confirmPayment,
-);
+// PAYMENT DISABLED — restore this route with Stripe checkout step 2.
+// router.post(
+//   "/me/:id/confirm-payment",
+//   authenticate,
+//   validate(orderIdParamSchema, "params"),
+//   ordersController.confirmPayment,
+// );
 
 router.post(
   "/me/:id/cancel",

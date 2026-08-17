@@ -6,6 +6,7 @@ import { leadsRouter } from "@/modules/leads/index.js";
 import { callsRouter } from "@/modules/calls/index.js";
 import { marketplaceRouter } from "@/modules/marketplace/index.js";
 import { ordersRouter } from "@/modules/orders/index.js";
+import { promosRouter } from "@/modules/promos/index.js";
 import { reviewsRouter } from "@/modules/reviews/index.js";
 
 const router = Router();
@@ -17,6 +18,7 @@ router.use("/leads", leadsRouter);
 router.use("/calls", callsRouter);
 router.use("/marketplace", marketplaceRouter);
 router.use("/orders", ordersRouter);
+router.use("/promos", promosRouter);
 router.use("/reviews", reviewsRouter);
 
 export { router as apiRouter };
