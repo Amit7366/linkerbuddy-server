@@ -175,6 +175,40 @@ enum LeadStatus {
   LOST
 }
 
+enum CtaRequestStatus {
+  NEW
+  CONTACTED
+  CONVERTED
+}
+
+enum CtaAiStatus {
+  PENDING
+  READY
+  FAILED
+}
+
+model CtaRequest {
+  id             String           @id @default(cuid())
+  email          String
+  niche          String
+  budget         String
+  status         CtaRequestStatus @default(NEW)
+  aiStatus       CtaAiStatus      @default(PENDING)
+  writeTokenHash String?
+  summary        String?
+  strategy       String?
+  tips           Json?
+  recommendations Json?
+  aiError        String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([email])
+  @@index([status])
+  @@index([aiStatus])
+  @@index([createdAt])
+}
+
 // ─── Phase 2 (orders / checkout) ────────────────────────────────────────────
 
 enum OrderStatus {

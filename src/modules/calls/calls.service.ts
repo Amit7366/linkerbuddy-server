@@ -247,7 +247,7 @@ export const callsService = {
     };
   },
 
-  async listCalls(params: { status?: CallStatus; page: number; limit: number }) {
+  async listCalls(params: { status?: CallStatus; q?: string; page: number; limit: number }) {
     return callsModel.findMany(params);
   },
 

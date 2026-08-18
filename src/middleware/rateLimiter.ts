@@ -77,6 +77,17 @@ export const reviewsReadRateLimiter = rateLimit({
   },
 });
 
+export const ctaRequestsRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 40,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    error: { code: "RATE_LIMIT", message: "Too many shortlist requests, please try again later" },
+  },
+});
+
 export const reviewsWriteRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 30,

@@ -57,15 +57,27 @@ export const callsModel = {
     });
   },
 
-  async findMany(params: { status?: CallStatus; page: number; limit: number }) {
+  async findMany(params: { status?: CallStatus; q?: string; page: number; limit: number }) {
     const skip = (params.page - 1) * params.limit;
-    const where = params.status ? { status: params.status } : {};
+    const q = params.q?.trim();
+    const where: Prisma.ScheduledCallWhereInput = {};
+    if (params.status) where.status = params.status;
+    if (q) {
+      where.lead = {
+        OR: [
+          { name: { contains: q, mode: "insensitive" } },
+          { email: { contains: q, mode: "insensitive" } },
+          { phone: { contains: q, mode: "insensitive" } },
+          { company: { contains: q, mode: "insensitive" } },
+        ],
+      };
+    }
     const [calls, total] = await Promise.all([
       prisma.scheduledCall.findMany({
         where,
         skip,
         take: params.limit,
-        orderBy: { startsAt: "asc" },
+        orderBy: { startsAt: "desc" },
         include: callInclude,
       }),
       prisma.scheduledCall.count({ where }),

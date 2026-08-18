@@ -33,7 +33,7 @@ export type CallFields = InquiryFields & {
 
 type DetailRow = { label: string; value: string; href?: string };
 
-const NAVY = "#071b3d";
+const NAVY = "#483EF4"; /* was #071b3d */
 const BLUE = "#1268f3";
 const MUTED = "#5b6b82";
 const INK = "#10203a";

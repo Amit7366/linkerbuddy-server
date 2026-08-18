@@ -8,6 +8,7 @@ import { marketplaceRouter } from "@/modules/marketplace/index.js";
 import { ordersRouter } from "@/modules/orders/index.js";
 import { promosRouter } from "@/modules/promos/index.js";
 import { reviewsRouter } from "@/modules/reviews/index.js";
+import { ctaRequestsRouter } from "@/modules/cta-requests/index.js";
 
 const router = Router();
 
@@ -20,5 +21,6 @@ router.use("/marketplace", marketplaceRouter);
 router.use("/orders", ordersRouter);
 router.use("/promos", promosRouter);
 router.use("/reviews", reviewsRouter);
+router.use("/cta-requests", ctaRequestsRouter);
 
 export { router as apiRouter };
