@@ -1,8 +1,8 @@
 export const companyContact = {
   name: "Linkerbuddy",
   email: "linkerbuddy@gmail.com",
-  phoneDisplay: "+880 1709-751603",
-  phoneE164: "+8801709751603",
-  whatsappE164: "8801709751603",
-  address: "Dhaka, Bangladesh",
+  phoneDisplay: "+1 (606) 415-0230",
+  phoneE164: "+16064150230",
+  whatsappE164: "16064150230",
+  address: "USA - 30 N GOULD ST STE R, SHERIDAN WY 82801",
 } as const;

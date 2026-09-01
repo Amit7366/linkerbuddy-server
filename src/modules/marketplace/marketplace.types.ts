@@ -1,3 +1,5 @@
+import type { ListingPrices } from "./listing-prices.js";
+
 export interface MarketplaceListingResponse {
   id: number;
   domain: string;
@@ -7,8 +9,7 @@ export interface MarketplaceListingResponse {
   traffic: number;
   country: string;
   maxDofollow: number;
-  guest: number;
-  insert: number;
+  prices: ListingPrices;
   tat: string;
   owner: "Admin" | "Partner";
   trend: "Rising" | "Stable";

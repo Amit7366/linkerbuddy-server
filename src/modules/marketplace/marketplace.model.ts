@@ -6,8 +6,13 @@ import type {
   UpdateListingInput,
 } from "./marketplace.validation.js";
 import type { MarketplaceListingResponse } from "./marketplace.types.js";
+import {
+  columnsToPrices,
+  pricesToColumns,
+  type ListingPriceColumns,
+} from "./listing-prices.js";
 
-function toResponse(row: {
+type ListingRow = ListingPriceColumns & {
   id: number;
   domain: string;
   niche: string;
@@ -16,14 +21,14 @@ function toResponse(row: {
   traffic: number;
   country: string;
   maxDofollow: number;
-  guest: number;
-  insert: number;
   tat: string;
   owner: string;
   trend: string;
   createdAt?: Date;
   updatedAt?: Date;
-}): MarketplaceListingResponse {
+};
+
+function toResponse(row: ListingRow): MarketplaceListingResponse {
   return {
     id: row.id,
     domain: row.domain,
@@ -33,8 +38,7 @@ function toResponse(row: {
     traffic: row.traffic,
     country: row.country,
     maxDofollow: row.maxDofollow,
-    guest: row.guest,
-    insert: row.insert,
+    prices: columnsToPrices(row),
     tat: row.tat,
     owner: row.owner as "Admin" | "Partner",
     trend: row.trend as "Rising" | "Stable",
@@ -61,7 +65,7 @@ function applyFilterKey(
 ) {
   switch (key) {
     case "budget":
-      and.push({ guest: { lte: 50 } });
+      and.push({ guestPostRegular: { lte: 50 } });
       break;
     case "authority":
       and.push({ dr: { gte: 40, lte: 60 } });
@@ -135,11 +139,11 @@ function buildWhere(query: ListListingsQuery): Prisma.MarketplaceListingWhereInp
   }
 
   if (query.priceMax !== undefined) {
-    and.push({ guest: { lte: query.priceMax } });
+    and.push({ guestPostRegular: { lte: query.priceMax } });
   }
 
   if (query.priceMin !== undefined) {
-    and.push({ guest: { gte: query.priceMin } });
+    and.push({ guestPostRegular: { gte: query.priceMin } });
   }
 
   const trafficFilter: { gte?: number; lte?: number } = {};
@@ -172,7 +176,7 @@ function buildOrderBy(
 ): Prisma.MarketplaceListingOrderByWithRelationInput[] {
   switch (sort) {
     case "price":
-      return [{ guest: "asc" }, { id: "asc" }];
+      return [{ guestPostRegular: "asc" }, { id: "asc" }];
     case "traffic":
       return [{ traffic: "desc" }, { id: "asc" }];
     case "dr":
@@ -301,22 +305,23 @@ export const marketplaceModel = {
         traffic: data.traffic,
         country: data.country,
         maxDofollow: data.maxDofollow,
-        guest: data.guest,
-        insert: data.insert,
         tat: data.tat,
         owner: data.owner,
         trend: data.trend,
+        ...pricesToColumns(data.prices),
       },
     });
     return toResponse(row);
   },
 
   async update(id: number, data: UpdateListingInput) {
+    const { prices, domain, ...rest } = data;
     const row = await prisma.marketplaceListing.update({
       where: { id },
       data: {
-        ...data,
-        ...(data.domain ? { domain: data.domain.toLowerCase() } : {}),
+        ...rest,
+        ...(domain ? { domain: domain.toLowerCase() } : {}),
+        ...(prices ? pricesToColumns(prices) : {}),
       },
     });
     return toResponse(row);

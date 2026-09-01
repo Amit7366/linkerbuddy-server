@@ -1,4 +1,4 @@
-import type { OrderStatus, PaymentStatus, Prisma, ServiceType } from "@prisma/client";
+import type { OrderStatus, PaymentStatus, Prisma, ServiceType, NicheType } from "@prisma/client";
 import { prisma } from "@/lib/prisma.js";
 import type { ListOrdersQuery } from "./orders.validation.js";
 
@@ -113,6 +113,7 @@ export const ordersModel = {
       domain: string;
       niche: string;
       serviceType: ServiceType;
+      nicheType: NicheType;
       unitPriceCents: number;
       quantity: number;
       lineTotalCents: number;
@@ -211,6 +212,7 @@ export const ordersModel = {
       domain: string;
       niche: string;
       serviceType: ServiceType;
+      nicheType: NicheType;
       unitPriceCents: number;
       quantity: number;
       lineTotalCents: number;

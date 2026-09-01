@@ -137,25 +137,35 @@ model AvailabilityBlock {
 }
 
 model MarketplaceListing {
-  id          Int      @id @default(autoincrement())
-  domain      String   @unique
-  niche       String
-  da          Int
-  dr          Int
-  traffic     Int
-  country     String
-  maxDofollow Int
-  guest       Int
-  insert      Int
-  tat         String
-  owner       String
-  trend       String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id                   Int      @id @default(autoincrement())
+  domain               String   @unique
+  niche                String
+  da                   Int
+  dr                   Int
+  traffic              Int
+  country              String
+  maxDofollow          Int
+  guestPostRegular     Int      @default(0)
+  guestPostGray        Int      @default(0)
+  linkInsertRegular    Int      @default(0)
+  linkInsertGray       Int      @default(0)
+  brandPromotionRegular Int     @default(0)
+  brandPromotionGray   Int      @default(0)
+  pressNewsRegular     Int      @default(0)
+  pressNewsGray        Int      @default(0)
+  sidebarLinkRegular   Int      @default(0)
+  sidebarLinkGray      Int      @default(0)
+  bannerAdsRegular     Int      @default(0)
+  bannerAdsGray        Int      @default(0)
+  tat                  String
+  owner                String
+  trend                String
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   @@index([niche])
   @@index([country])
-  @@index([guest])
+  @@index([guestPostRegular])
   @@index([dr])
   @@index([da])
 }
@@ -231,8 +241,17 @@ enum PaymentStatus {
 }
 
 enum ServiceType {
-  GUEST
-  INSERT
+  GUEST_POST
+  LINK_INSERT
+  BRAND_PROMOTION
+  PRESS_NEWS
+  SIDEBAR_LINK
+  BANNER_ADS
+}
+
+enum NicheType {
+  REGULAR
+  GRAY
 }
 
 enum PromoDiscountType {
@@ -325,6 +344,7 @@ model OrderItem {
   domain         String
   niche          String
   serviceType    ServiceType
+  nicheType      NicheType   @default(REGULAR)
   unitPriceCents Int
   quantity       Int         @default(1)
   lineTotalCents Int

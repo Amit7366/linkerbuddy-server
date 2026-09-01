@@ -1,4 +1,4 @@
-import type { OrderStatus, PaymentStatus, ServiceType } from "@prisma/client";
+import type { OrderStatus, PaymentStatus, ServiceType, NicheType } from "@prisma/client";
 
 export type OrderItemDto = {
   id: string;
@@ -6,6 +6,7 @@ export type OrderItemDto = {
   domain: string;
   niche: string;
   serviceType: ServiceType;
+  nicheType: NicheType;
   unitPriceCents: number;
   quantity: number;
   lineTotalCents: number;

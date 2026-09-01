@@ -1,4 +1,4 @@
-import { PrismaClient, Role, ServiceType } from "@prisma/client";
+import { PrismaClient, Role, ServiceType, NicheType } from "@prisma/client";
 import bcrypt from "bcrypt";
 import { readFileSync } from "fs";
 import { dirname, join } from "path";
@@ -15,8 +15,18 @@ type SeedListing = {
   traffic: number;
   country: string;
   maxDofollow: number;
-  guest: number;
-  insert: number;
+  guestPostRegular: number;
+  guestPostGray: number;
+  linkInsertRegular: number;
+  linkInsertGray: number;
+  brandPromotionRegular: number;
+  brandPromotionGray: number;
+  pressNewsRegular: number;
+  pressNewsGray: number;
+  sidebarLinkRegular: number;
+  sidebarLinkGray: number;
+  bannerAdsRegular: number;
+  bannerAdsGray: number;
   tat: string;
   owner: string;
   trend: string;
@@ -137,15 +147,18 @@ async function main() {
     },
   });
 
-  const listingCount = await prisma.marketplaceListing.count();
-  if (listingCount === 0) {
-    const raw = readFileSync(join(__dirname, "data/site-listings.json"), "utf8");
-    const listings = JSON.parse(raw) as SeedListing[];
-    await prisma.marketplaceListing.createMany({ data: listings });
-    console.log(`Seeded ${listings.length} marketplace listings`);
-  } else {
-    console.log(`Marketplace listings already present (${listingCount}), skipping`);
+  const raw = readFileSync(join(__dirname, "data/site-listings.json"), "utf8");
+  const listings = JSON.parse(raw) as SeedListing[];
+  let upserted = 0;
+  for (const listing of listings) {
+    await prisma.marketplaceListing.upsert({
+      where: { domain: listing.domain },
+      create: listing,
+      update: listing,
+    });
+    upserted += 1;
   }
+  console.log(`Upserted ${upserted} marketplace listings`);
 
   const availabilityCount = await prisma.availabilityRule.count();
   if (availabilityCount === 0) {
@@ -203,7 +216,7 @@ async function main() {
       throw new Error("No marketplace listing available to seed review orders");
     }
 
-    const unitPriceCents = Math.round(listing.guest * 100);
+    const unitPriceCents = Math.round(listing.guestPostRegular * 100);
 
     for (let i = 0; i < SEED_REVIEWS.length; i++) {
       const reviewer = reviewers[i % reviewers.length]!;
@@ -235,7 +248,8 @@ async function main() {
               listingId: listing.id,
               domain: listing.domain,
               niche: listing.niche,
-              serviceType: ServiceType.GUEST,
+              serviceType: ServiceType.GUEST_POST,
+              nicheType: NicheType.REGULAR,
               unitPriceCents,
               quantity: 1,
               lineTotalCents: unitPriceCents,

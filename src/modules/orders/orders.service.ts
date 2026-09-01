@@ -1,5 +1,5 @@
 import { randomBytes } from "crypto";
-import type { OrderStatus, ServiceType } from "@prisma/client";
+import type { OrderStatus, ServiceType, NicheType } from "@prisma/client";
 import { prisma } from "@/lib/prisma.js";
 import { getStripe } from "@/lib/stripe.js";
 import { AppError } from "@/utils/appError.js";
@@ -10,6 +10,12 @@ import {
   assertPromoUsable,
   computePromoDiscount,
 } from "@/modules/promos/promos.service.js";
+import {
+  columnsToPrices,
+  priceFor,
+  type ListingServiceType,
+  type ListingNicheType,
+} from "@/modules/marketplace/listing-prices.js";
 import { ordersModel } from "./orders.model.js";
 import type {
   CheckoutIntentInput,
@@ -59,7 +65,18 @@ export const ordersService = {
 
     const resolvedItems = input.items.map((item) => {
       const listing = byId.get(item.listingId)!;
-      const unitDollars = item.serviceType === "GUEST" ? listing.guest : listing.insert;
+      const unitDollars = priceFor(
+        columnsToPrices(listing),
+        item.serviceType as ListingServiceType,
+        item.nicheType as ListingNicheType,
+      );
+      if (unitDollars <= 0) {
+        throw new AppError(
+          `${item.serviceType} / ${item.nicheType} is not offered on ${listing.domain}`,
+          400,
+          "SERVICE_NOT_OFFERED",
+        );
+      }
       const unitPriceCents = dollarsToCents(unitDollars);
       const lineTotalCents = unitPriceCents * item.quantity;
       return {
@@ -67,6 +84,7 @@ export const ordersService = {
         domain: listing.domain,
         niche: listing.niche,
         serviceType: item.serviceType as ServiceType,
+        nicheType: item.nicheType as NicheType,
         unitPriceCents,
         quantity: item.quantity,
         lineTotalCents,
@@ -296,6 +314,7 @@ export const ordersService = {
           domain: string;
           niche: string;
           serviceType: ServiceType;
+          nicheType: NicheType;
           unitPriceCents: number;
           quantity: number;
           lineTotalCents: number;
@@ -318,17 +337,29 @@ export const ordersService = {
         if (!domain) {
           throw new AppError(`Listing ${item.listingId} not found`, 400, "LISTING_NOT_FOUND");
         }
+        const catalogDollars = listing
+          ? priceFor(
+              columnsToPrices(listing),
+              item.serviceType as ListingServiceType,
+              item.nicheType as ListingNicheType,
+            )
+          : 0;
         const unitPriceCents =
-          item.unitPriceCents ??
-          dollarsToCents(
-            item.serviceType === "GUEST" ? (listing?.guest ?? 0) : (listing?.insert ?? 0),
+          item.unitPriceCents ?? dollarsToCents(catalogDollars);
+        if (item.unitPriceCents === undefined && catalogDollars <= 0) {
+          throw new AppError(
+            `${item.serviceType} / ${item.nicheType} is not offered on ${domain}`,
+            400,
+            "SERVICE_NOT_OFFERED",
           );
+        }
         const lineTotalCents = unitPriceCents * item.quantity;
         return {
           listingId: item.listingId,
           domain,
           niche,
           serviceType: item.serviceType,
+          nicheType: item.nicheType,
           unitPriceCents,
           quantity: item.quantity,
           lineTotalCents,

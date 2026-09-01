@@ -471,6 +471,7 @@ export type OrderEmailItem = {
   domain: string;
   niche?: string | null;
   serviceType: string;
+  nicheType?: string | null;
   quantity: number;
   lineTotalCents: number;
 };
@@ -500,10 +501,24 @@ function formatMoney(cents: number, currency = "usd") {
   return currency.toLowerCase() === "usd" ? `$${amount}` : `${amount} ${currency.toUpperCase()}`;
 }
 
-function serviceLabel(value: string) {
-  if (value === "GUEST") return "Guest post";
-  if (value === "INSERT") return "Link insertion";
-  return value;
+function serviceLabel(serviceType: string, nicheType?: string | null) {
+  const services: Record<string, string> = {
+    GUEST_POST: "Guest post",
+    LINK_INSERT: "Link insert / Niche edit",
+    BRAND_PROMOTION: "Brand promotion",
+    PRESS_NEWS: "Press news",
+    SIDEBAR_LINK: "Sidebar link",
+    BANNER_ADS: "Banner ads",
+    GUEST: "Guest post",
+    INSERT: "Link insertion",
+  };
+  const niches: Record<string, string> = {
+    REGULAR: "Regular niche",
+    GRAY: "Gray niche",
+  };
+  const service = services[serviceType] ?? serviceType;
+  const niche = nicheType ? niches[nicheType] ?? nicheType : null;
+  return niche ? `${service} · ${niche}` : service;
 }
 
 function paymentLabel(value: string) {
@@ -529,7 +544,7 @@ function orderAddress(input: OrderEmailFields) {
 function orderItemsBlock(items: OrderEmailItem[], totalCents: number, currency: string) {
   const rows = items
     .map((item) => {
-      const meta = [serviceLabel(item.serviceType), `Qty ${item.quantity}`, item.niche]
+      const meta = [serviceLabel(item.serviceType, item.nicheType), `Qty ${item.quantity}`, item.niche]
         .filter(Boolean)
         .join(" · ");
       return `<tr>
@@ -554,7 +569,7 @@ function orderItemsBlock(items: OrderEmailItem[], totalCents: number, currency: 
     "Order items",
     ...items.map(
       (item) =>
-        `- ${item.domain} · ${serviceLabel(item.serviceType)} × ${item.quantity} · ${formatMoney(item.lineTotalCents, currency)}`,
+        `- ${item.domain} · ${serviceLabel(item.serviceType, item.nicheType)} × ${item.quantity} · ${formatMoney(item.lineTotalCents, currency)}`,
     ),
     `Total: ${formatMoney(totalCents, currency)}`,
   ].join("\n");

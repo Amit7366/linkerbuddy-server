@@ -1,6 +1,15 @@
 import { z } from "zod";
 
-export const serviceTypeSchema = z.enum(["GUEST", "INSERT"]);
+export const serviceTypeSchema = z.enum([
+  "GUEST_POST",
+  "LINK_INSERT",
+  "BRAND_PROMOTION",
+  "PRESS_NEWS",
+  "SIDEBAR_LINK",
+  "BANNER_ADS",
+]);
+
+export const nicheTypeSchema = z.enum(["REGULAR", "GRAY"]);
 
 export const billingSchema = z.object({
   billingName: z.string().min(1, "Name is required").max(120),
@@ -19,6 +28,7 @@ export const billingSchema = z.object({
 export const checkoutItemSchema = z.object({
   listingId: z.coerce.number().int().positive(),
   serviceType: serviceTypeSchema,
+  nicheType: nicheTypeSchema,
   quantity: z.coerce.number().int().min(1).max(99),
 });
 
@@ -70,6 +80,7 @@ export const updateOrderItemSchema = z.object({
   id: z.string().optional(),
   listingId: z.coerce.number().int().positive(),
   serviceType: serviceTypeSchema,
+  nicheType: nicheTypeSchema,
   quantity: z.coerce.number().int().min(1).max(99),
   unitPriceCents: z.coerce.number().int().min(0).optional(),
   domain: z.string().optional(),

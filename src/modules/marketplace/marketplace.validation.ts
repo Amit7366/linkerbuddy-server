@@ -1,7 +1,26 @@
 import { z } from "zod";
+import { hasAnyPrice } from "./listing-prices.js";
 
 const ownerEnum = z.enum(["Admin", "Partner"]);
 const trendEnum = z.enum(["Rising", "Stable"]);
+
+const nichePricesSchema = z.object({
+  guestPost: z.number().int().min(0),
+  linkInsert: z.number().int().min(0),
+  brandPromotion: z.number().int().min(0),
+  pressNews: z.number().int().min(0),
+  sidebarLink: z.number().int().min(0),
+  bannerAds: z.number().int().min(0),
+});
+
+export const listingPricesSchema = z
+  .object({
+    regular: nichePricesSchema,
+    gray: nichePricesSchema,
+  })
+  .refine(hasAnyPrice, {
+    message: "At least one price must be greater than 0",
+  });
 
 export const createListingSchema = z
   .object({
@@ -19,8 +38,7 @@ export const createListingSchema = z
     traffic: z.number().int().min(0),
     country: z.string().min(1).max(120),
     maxDofollow: z.number().int().min(0).max(100),
-    guest: z.number().int().min(0),
-    insert: z.number().int().min(0),
+    prices: listingPricesSchema,
     tat: z.string().min(1).max(120),
     owner: ownerEnum,
     trend: trendEnum,
