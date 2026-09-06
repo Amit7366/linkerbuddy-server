@@ -1,6 +1,6 @@
 export const companyContact = {
   name: "Linkerbuddy",
-  email: "linkerbuddy@gmail.com",
+  email: "admin@linkerbuddy.com",
   phoneDisplay: "+1 (606) 415-0230",
   phoneE164: "+16064150230",
   whatsappE164: "16064150230",
