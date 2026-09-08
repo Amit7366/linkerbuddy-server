@@ -7,10 +7,14 @@ export interface MarketplaceListingResponse {
   da: number;
   dr: number;
   traffic: number;
+  trafficSources: string[];
   country: string;
+  dofollow: boolean;
   maxDofollow: number;
   prices: ListingPrices;
   tat: string;
+  samplePostUrls: string[];
+  note: string;
   owner: "Admin" | "Partner";
   trend: "Rising" | "Stable";
   createdAt?: Date;

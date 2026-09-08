@@ -4,6 +4,20 @@ import { hasAnyPrice } from "./listing-prices.js";
 const ownerEnum = z.enum(["Admin", "Partner"]);
 const trendEnum = z.enum(["Rising", "Stable"]);
 
+const httpUrl = z
+  .string()
+  .trim()
+  .min(1)
+  .max(500)
+  .refine((value) => {
+    try {
+      const url = new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`);
+      return Boolean(url.hostname.includes("."));
+    } catch {
+      return false;
+    }
+  }, "Enter a valid sample post URL");
+
 const nichePricesSchema = z.object({
   guestPost: z.number().int().min(0),
   linkInsert: z.number().int().min(0),
@@ -36,10 +50,14 @@ export const createListingSchema = z
     da: z.number().int().min(0).max(100),
     dr: z.number().int().min(0).max(100),
     traffic: z.number().int().min(0),
+    trafficSources: z.array(z.string().trim().min(1).max(80)).max(12).default([]),
     country: z.string().min(1).max(120),
+    dofollow: z.boolean().default(true),
     maxDofollow: z.number().int().min(0).max(100),
     prices: listingPricesSchema,
     tat: z.string().min(1).max(120),
+    samplePostUrls: z.array(httpUrl).max(10).default([]),
+    note: z.string().max(4000).default(""),
     owner: ownerEnum,
     trend: trendEnum,
   })
@@ -73,7 +91,7 @@ export const listListingsQuerySchema = z.object({
   trafficMax: z.coerce.number().int().nonnegative().optional(),
   priceMin: z.coerce.number().int().nonnegative().optional(),
   sort: z
-    .enum(["recommended", "price", "traffic", "dr", "da"])
+    .enum(["recommended", "price", "traffic", "dr", "da", "newest"])
     .default("recommended"),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(100).default(20),

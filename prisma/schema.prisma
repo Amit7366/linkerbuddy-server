@@ -143,7 +143,9 @@ model MarketplaceListing {
   da                   Int
   dr                   Int
   traffic              Int
+  trafficSources       String[] @default([])
   country              String
+  dofollow             Boolean  @default(true)
   maxDofollow          Int
   guestPostRegular     Int      @default(0)
   guestPostGray        Int      @default(0)
@@ -158,6 +160,8 @@ model MarketplaceListing {
   bannerAdsRegular     Int      @default(0)
   bannerAdsGray        Int      @default(0)
   tat                  String
+  samplePostUrls       String[] @default([])
+  note                 String   @default("")
   owner                String
   trend                String
   createdAt            DateTime @default(now())

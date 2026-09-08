@@ -28,9 +28,13 @@ type SeedListing = {
   bannerAdsRegular: number;
   bannerAdsGray: number;
   tat: string;
+  note?: string;
   owner: string;
   trend: string;
 };
+
+const DEFAULT_LISTING_NOTE =
+  "Copy and AI Free Contents helps most in Index & Ranking. SEO Friendly Content Writing Available!!";
 
 const SEED_REVIEWERS = [
   { email: "ava.chen@example.com", name: "Ava Chen" },
@@ -151,10 +155,14 @@ async function main() {
   const listings = JSON.parse(raw) as SeedListing[];
   let upserted = 0;
   for (const listing of listings) {
+    const withNote = {
+      ...listing,
+      note: listing.note?.trim() || DEFAULT_LISTING_NOTE,
+    };
     await prisma.marketplaceListing.upsert({
       where: { domain: listing.domain },
-      create: listing,
-      update: listing,
+      create: withNote,
+      update: withNote,
     });
     upserted += 1;
   }

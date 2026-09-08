@@ -19,14 +19,24 @@ type ListingRow = ListingPriceColumns & {
   da: number;
   dr: number;
   traffic: number;
+  trafficSources: string[];
   country: string;
+  dofollow: boolean;
   maxDofollow: number;
   tat: string;
+  samplePostUrls: string[];
+  note: string;
   owner: string;
   trend: string;
   createdAt?: Date;
   updatedAt?: Date;
 };
+
+function normalizeSampleUrl(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return trimmed;
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
 
 function toResponse(row: ListingRow): MarketplaceListingResponse {
   return {
@@ -36,10 +46,14 @@ function toResponse(row: ListingRow): MarketplaceListingResponse {
     da: row.da,
     dr: row.dr,
     traffic: row.traffic,
+    trafficSources: row.trafficSources,
     country: row.country,
+    dofollow: row.dofollow,
     maxDofollow: row.maxDofollow,
     prices: columnsToPrices(row),
     tat: row.tat,
+    samplePostUrls: row.samplePostUrls,
+    note: row.note,
     owner: row.owner as "Admin" | "Partner",
     trend: row.trend as "Rising" | "Stable",
     createdAt: row.createdAt,
@@ -183,6 +197,8 @@ function buildOrderBy(
       return [{ dr: "desc" }, { id: "asc" }];
     case "da":
       return [{ da: "desc" }, { id: "asc" }];
+    case "newest":
+      return [{ createdAt: "desc" }, { id: "desc" }];
     default:
       return [{ traffic: "desc" }, { id: "asc" }];
   }
@@ -268,9 +284,13 @@ export const marketplaceModel = {
         da: data.da,
         dr: data.dr,
         traffic: data.traffic,
+        trafficSources: data.trafficSources,
         country: data.country,
+        dofollow: data.dofollow,
         maxDofollow: data.maxDofollow,
         tat: data.tat,
+        samplePostUrls: data.samplePostUrls.map(normalizeSampleUrl),
+        note: data.note,
         owner: data.owner,
         trend: data.trend,
         ...pricesToColumns(data.prices),
@@ -280,12 +300,15 @@ export const marketplaceModel = {
   },
 
   async update(id: number, data: UpdateListingInput) {
-    const { prices, domain, ...rest } = data;
+    const { prices, domain, samplePostUrls, ...rest } = data;
     const row = await prisma.marketplaceListing.update({
       where: { id },
       data: {
         ...rest,
         ...(domain ? { domain: domain.toLowerCase() } : {}),
+        ...(samplePostUrls
+          ? { samplePostUrls: samplePostUrls.map(normalizeSampleUrl) }
+          : {}),
         ...(prices ? pricesToColumns(prices) : {}),
       },
     });

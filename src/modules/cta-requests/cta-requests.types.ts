@@ -1,8 +1,9 @@
 export const CTA_NICHES = [
   "General",
-  "Food/General",
-  "News/General",
-  "SaaS/General",
+  "Entertainment",
+  "Social Media",
+  "Tech",
+  "Food",
 ] as const;
 
 export const CTA_BUDGETS = ["$30–$50", "$50–$100", "$100+"] as const;
