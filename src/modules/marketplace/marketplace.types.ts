@@ -17,6 +17,9 @@ export interface MarketplaceListingResponse {
   note: string;
   owner: "Admin" | "Partner";
   trend: "Rising" | "Stable";
+  isNew?: boolean;
+  createdAt?: Date;
+  updatedAt?: Date;
   createdAt?: Date;
   updatedAt?: Date;
 }

@@ -38,7 +38,18 @@ function normalizeSampleUrl(value: string) {
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
 }
 
-function toResponse(row: ListingRow): MarketplaceListingResponse {
+const NEWEST_BADGE_LIMIT = 5;
+
+async function newestListingIds() {
+  const rows = await prisma.marketplaceListing.findMany({
+    select: { id: true },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: NEWEST_BADGE_LIMIT,
+  });
+  return new Set(rows.map((row) => row.id));
+}
+
+function toResponse(row: ListingRow, newestIds?: Set<number>): MarketplaceListingResponse {
   return {
     id: row.id,
     domain: row.domain,
@@ -56,6 +67,7 @@ function toResponse(row: ListingRow): MarketplaceListingResponse {
     note: row.note,
     owner: row.owner as "Admin" | "Partner",
     trend: row.trend as "Rising" | "Stable",
+    isNew: newestIds?.has(row.id) ?? false,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
   };
@@ -210,7 +222,7 @@ export const marketplaceModel = {
     const skip = (query.page - 1) * query.limit;
     const sort = query.sort ?? "recommended";
 
-    const [rows, total] = await Promise.all([
+    const [rows, total, newestIds] = await Promise.all([
       prisma.marketplaceListing.findMany({
         where,
         skip,
@@ -218,10 +230,11 @@ export const marketplaceModel = {
         orderBy: buildOrderBy(sort),
       }),
       prisma.marketplaceListing.count({ where }),
+      newestListingIds(),
     ]);
 
     return {
-      listings: rows.map(toResponse),
+      listings: rows.map((row) => toResponse(row, newestIds)),
       total,
       page: query.page,
       limit: query.limit,
@@ -268,8 +281,11 @@ export const marketplaceModel = {
   },
 
   async findById(id: number) {
-    const row = await prisma.marketplaceListing.findUnique({ where: { id } });
-    return row ? toResponse(row) : null;
+    const [row, newestIds] = await Promise.all([
+      prisma.marketplaceListing.findUnique({ where: { id } }),
+      newestListingIds(),
+    ]);
+    return row ? toResponse(row, newestIds) : null;
   },
 
   async findByDomain(domain: string) {
@@ -296,7 +312,8 @@ export const marketplaceModel = {
         ...pricesToColumns(data.prices),
       },
     });
-    return toResponse(row);
+    const newestIds = await newestListingIds();
+    return toResponse(row, newestIds);
   },
 
   async update(id: number, data: UpdateListingInput) {
@@ -312,7 +329,8 @@ export const marketplaceModel = {
         ...(prices ? pricesToColumns(prices) : {}),
       },
     });
-    return toResponse(row);
+    const newestIds = await newestListingIds();
+    return toResponse(row, newestIds);
   },
 
   async delete(id: number) {

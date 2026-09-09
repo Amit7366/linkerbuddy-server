@@ -13,6 +13,7 @@ type SeedListing = {
   da: number;
   dr: number;
   traffic: number;
+  trafficSources?: string[];
   country: string;
   maxDofollow: number;
   guestPostRegular: number;
@@ -157,6 +158,8 @@ async function main() {
   for (const listing of listings) {
     const withNote = {
       ...listing,
+      maxDofollow: 2,
+      dofollow: true,
       note: listing.note?.trim() || DEFAULT_LISTING_NOTE,
     };
     await prisma.marketplaceListing.upsert({
