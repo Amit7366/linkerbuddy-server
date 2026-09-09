@@ -20,8 +20,6 @@ export interface MarketplaceListingResponse {
   isNew?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
-  createdAt?: Date;
-  updatedAt?: Date;
 }
 
 export interface PaginatedListings {
