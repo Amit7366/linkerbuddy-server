@@ -9,6 +9,7 @@ import { ordersRouter } from "@/modules/orders/index.js";
 import { promosRouter } from "@/modules/promos/index.js";
 import { reviewsRouter } from "@/modules/reviews/index.js";
 import { ctaRequestsRouter } from "@/modules/cta-requests/index.js";
+import { dashboardRouter } from "@/modules/dashboard/index.js";
 
 const router = Router();
 
@@ -22,5 +23,6 @@ router.use("/orders", ordersRouter);
 router.use("/promos", promosRouter);
 router.use("/reviews", reviewsRouter);
 router.use("/cta-requests", ctaRequestsRouter);
+router.use("/dashboard", dashboardRouter);
 
 export { router as apiRouter };
