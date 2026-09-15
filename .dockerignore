@@ -1,0 +1,14 @@
+node_modules
+dist
+.git
+.gitignore
+.env
+.env.*
+*.log
+.DS_Store
+db_dump.bak
+scripts
+tests
+README.md
+.github
+deploy
