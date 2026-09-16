@@ -117,6 +117,7 @@ export const ordersModel = {
       unitPriceCents: number;
       quantity: number;
       lineTotalCents: number;
+      contentLink?: string | null;
     }>;
     initialEvent: {
       toStatus: OrderStatus;
@@ -216,6 +217,7 @@ export const ordersModel = {
       unitPriceCents: number;
       quantity: number;
       lineTotalCents: number;
+      contentLink?: string | null;
     }>,
   ) {
     return prisma.$transaction(async (tx) => {

@@ -1,13 +1,18 @@
 import type { Request, Response, NextFunction } from "express";
 import { marketplaceService } from "./marketplace.service.js";
 import { successResponse } from "@/utils/apiResponse.js";
+import { hasPermission } from "@/lib/permissions.js";
 import type { ListListingsQuery } from "./marketplace.validation.js";
+
+function canSeeListingPrices(req: Request) {
+  return Boolean(req.user && hasPermission(req.user.role, "marketplace:write"));
+}
 
 export const marketplaceController = {
   async list(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const query = req.query as unknown as ListListingsQuery;
-      const result = await marketplaceService.list(query);
+      const result = await marketplaceService.list(query, canSeeListingPrices(req));
       res.json(successResponse(result));
     } catch (error) {
       next(error);
@@ -35,7 +40,7 @@ export const marketplaceController = {
   async getById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const id = Number(req.params.id);
-      const listing = await marketplaceService.getById(id);
+      const listing = await marketplaceService.getById(id, canSeeListingPrices(req));
       res.json(successResponse(listing));
     } catch (error) {
       next(error);

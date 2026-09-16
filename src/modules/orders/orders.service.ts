@@ -49,6 +49,43 @@ function dollarsToCents(dollars: number) {
   return Math.round(dollars * 100);
 }
 
+function orderHasBeenAccepted(order: {
+  status: OrderStatus;
+  statusEvents?: Array<{ toStatus: OrderStatus }>;
+}) {
+  if (order.status === "PENDING" || order.status === "REJECTED") return false;
+  if (order.status === "CANCELLED") {
+    return Boolean(order.statusEvents?.some((event) => event.toStatus === "ACCEPTED"));
+  }
+  return true;
+}
+
+function redactCustomerOrder<
+  T extends {
+    status: OrderStatus;
+    statusEvents?: Array<{ toStatus: OrderStatus }>;
+    subtotalCents: number;
+    discountCents?: number | null;
+    totalCents: number;
+    manualTotalCents?: number | null;
+    items: Array<{ unitPriceCents: number; lineTotalCents: number }>;
+  },
+>(order: T): T {
+  if (orderHasBeenAccepted(order)) return order;
+  return {
+    ...order,
+    subtotalCents: 0,
+    discountCents: 0,
+    totalCents: 0,
+    manualTotalCents: null,
+    items: order.items.map((item) => ({
+      ...item,
+      unitPriceCents: 0,
+      lineTotalCents: 0,
+    })),
+  };
+}
+
 export const ordersService = {
   async createCheckoutIntent(userId: string, input: CheckoutIntentInput) {
     const listingIds = [...new Set(input.items.map((i) => i.listingId))];
@@ -77,24 +114,20 @@ export const ordersService = {
           "SERVICE_NOT_OFFERED",
         );
       }
-      const unitPriceCents = dollarsToCents(unitDollars);
-      const lineTotalCents = unitPriceCents * item.quantity;
       return {
         listingId: listing.id,
         domain: listing.domain,
         niche: listing.niche,
         serviceType: item.serviceType as ServiceType,
         nicheType: item.nicheType as NicheType,
-        unitPriceCents,
+        unitPriceCents: 0,
         quantity: item.quantity,
-        lineTotalCents,
+        lineTotalCents: 0,
+        contentLink: item.contentLink,
       };
     });
 
-    const subtotalCents = resolvedItems.reduce((sum, i) => sum + i.lineTotalCents, 0);
-    if (subtotalCents <= 0) {
-      throw new AppError("Order total must be greater than zero", 400, "INVALID_TOTAL");
-    }
+    const subtotalCents = 0;
 
     const billing = input.billing;
 
@@ -211,7 +244,11 @@ export const ordersService = {
   },
 
   async listMine(userId: string, query: ListOrdersQuery) {
-    return ordersModel.listForUser(userId, query);
+    const result = await ordersModel.listForUser(userId, query);
+    return {
+      ...result,
+      orders: result.orders.map((order) => redactCustomerOrder(order)),
+    };
   },
 
   async getMine(userId: string, id: string) {
@@ -219,7 +256,7 @@ export const ordersService = {
     if (!order || order.userId !== userId) {
       throw new AppError("Order not found", 404, "NOT_FOUND");
     }
-    return order;
+    return redactCustomerOrder(order);
   },
 
   async getMineByNumber(userId: string, orderNumber: string) {
@@ -227,7 +264,7 @@ export const ordersService = {
     if (!order || order.userId !== userId) {
       throw new AppError("Order not found", 404, "NOT_FOUND");
     }
-    return order;
+    return redactCustomerOrder(order);
   },
 
   async listAll(query: ListOrdersQuery) {
@@ -264,6 +301,18 @@ export const ordersService = {
       throw new AppError("Orders can only be rejected from PENDING", 400, "INVALID_STATUS_TRANSITION");
     }
 
+    if (input.status === "ACCEPTED") {
+      const allPriced =
+        order.items.length > 0 && order.items.every((item) => item.unitPriceCents > 0);
+      if (!allPriced || order.totalCents <= 0) {
+        throw new AppError(
+          "Set a price for each item before accepting this order",
+          400,
+          "QUOTE_REQUIRED",
+        );
+      }
+    }
+
     return ordersModel.updateStatus(id, {
       status: input.status,
       fromStatus: order.status,
@@ -284,12 +333,14 @@ export const ordersService = {
         "INVALID_STATUS_TRANSITION",
       );
     }
-    return ordersModel.updateStatus(id, {
-      status: "CANCELLED",
-      fromStatus: order.status,
-      note: "Cancelled by customer",
-      changedById: userId,
-    });
+    return redactCustomerOrder(
+      await ordersModel.updateStatus(id, {
+        status: "CANCELLED",
+        fromStatus: order.status,
+        note: "Cancelled by customer",
+        changedById: userId,
+      }),
+    );
   },
 
   async updateOrder(id: string, input: UpdateOrderInput) {
@@ -318,6 +369,7 @@ export const ordersService = {
           unitPriceCents: number;
           quantity: number;
           lineTotalCents: number;
+          contentLink?: string | null;
         }>
       | undefined;
 
@@ -363,6 +415,7 @@ export const ordersService = {
           unitPriceCents,
           quantity: item.quantity,
           lineTotalCents,
+          contentLink: item.contentLink ?? null,
         };
       });
       subtotalCents = replaceItems.reduce((sum, i) => sum + i.lineTotalCents, 0);
@@ -505,11 +558,13 @@ export const ordersService = {
     const stripe = getStripe();
     const intent = await stripe.paymentIntents.retrieve(order.stripePaymentIntentId);
     if (intent.status === "succeeded" && order.paymentStatus !== "PAID") {
-      return ordersModel.updatePayment(order.id, {
-        paymentStatus: "PAID",
-        stripePaymentIntentId: intent.id,
-      });
+      return redactCustomerOrder(
+        await ordersModel.updatePayment(order.id, {
+          paymentStatus: "PAID",
+          stripePaymentIntentId: intent.id,
+        }),
+      );
     }
-    return order;
+    return redactCustomerOrder(order);
   },
 };

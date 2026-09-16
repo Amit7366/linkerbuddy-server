@@ -53,6 +53,13 @@ export type ListingPrices = {
   gray: NichePrices;
 };
 
+export type NicheOffered = Record<ServicePriceKey, boolean>;
+
+export type ListingOffered = {
+  regular: NicheOffered;
+  gray: NicheOffered;
+};
+
 export type ListingPriceColumns = {
   guestPostRegular: number;
   guestPostGray: number;
@@ -133,6 +140,49 @@ export function hasAnyPrice(prices: ListingPrices): boolean {
   return SERVICE_PRICE_KEYS.some(
     (key) => prices.regular[key] > 0 || prices.gray[key] > 0,
   );
+}
+
+function nicheToOffered(branch: NichePrices): NicheOffered {
+  return {
+    guestPost: branch.guestPost > 0,
+    linkInsert: branch.linkInsert > 0,
+    brandPromotion: branch.brandPromotion > 0,
+    pressNews: branch.pressNews > 0,
+    sidebarLink: branch.sidebarLink > 0,
+    bannerAds: branch.bannerAds > 0,
+  };
+}
+
+export function pricesToOffered(prices: ListingPrices): ListingOffered {
+  return {
+    regular: nicheToOffered(prices.regular),
+    gray: nicheToOffered(prices.gray),
+  };
+}
+
+export function isOffered(
+  offered: ListingOffered,
+  serviceType: ListingServiceType,
+  nicheType: ListingNicheType,
+): boolean {
+  const branch = nicheType === "GRAY" ? offered.gray : offered.regular;
+  return branch[SERVICE_TO_PRICE_KEY[serviceType]] ?? false;
+}
+
+export function defaultOfferedCombo(
+  offered: ListingOffered,
+): { serviceType: ListingServiceType; nicheType: ListingNicheType } | null {
+  if (offered.regular.guestPost) {
+    return { serviceType: "GUEST_POST", nicheType: "REGULAR" };
+  }
+  for (const nicheType of NICHE_TYPES) {
+    for (const serviceType of SERVICE_TYPES) {
+      if (isOffered(offered, serviceType, nicheType)) {
+        return { serviceType, nicheType };
+      }
+    }
+  }
+  return null;
 }
 
 export type PriceOption = {

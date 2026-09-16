@@ -10,6 +10,7 @@ export type OrderItemDto = {
   unitPriceCents: number;
   quantity: number;
   lineTotalCents: number;
+  contentLink: string | null;
 };
 
 export type OrderStatusEventDto = {

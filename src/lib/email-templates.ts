@@ -474,6 +474,7 @@ export type OrderEmailItem = {
   nicheType?: string | null;
   quantity: number;
   lineTotalCents: number;
+  contentLink?: string | null;
 };
 
 export type OrderEmailFields = {
@@ -541,27 +542,38 @@ function orderAddress(input: OrderEmailFields) {
     .join(", ");
 }
 
-function orderItemsBlock(items: OrderEmailItem[], totalCents: number, currency: string) {
+function orderItemsBlock(
+  items: OrderEmailItem[],
+  totalCents: number,
+  currency: string,
+  options?: { hidePrices?: boolean },
+) {
+  const hidePrices = options?.hidePrices ?? false;
   const rows = items
     .map((item) => {
       const meta = [serviceLabel(item.serviceType, item.nicheType), `Qty ${item.quantity}`, item.niche]
         .filter(Boolean)
         .join(" · ");
+      const amount = hidePrices ? "Quote pending" : formatMoney(item.lineTotalCents, currency);
+      const content = item.contentLink
+        ? `<br /><span style="color:${MUTED};font-weight:500">Content: <a href="${escapeHtml(item.contentLink)}" style="color:${BLUE};text-decoration:underline">${escapeHtml(item.contentLink)}</a></span>`
+        : "";
       return `<tr>
         <td style="padding:10px 12px 10px 0;color:${INK};font-size:13px;line-height:1.45;vertical-align:top">
           <strong>${escapeHtml(item.domain)}</strong><br />
-          <span style="color:${MUTED};font-weight:500">${escapeHtml(meta)}</span>
+          <span style="color:${MUTED};font-weight:500">${escapeHtml(meta)}</span>${content}
         </td>
-        <td style="padding:10px 0;color:${INK};font-size:13px;font-weight:700;text-align:right;vertical-align:top;white-space:nowrap">${escapeHtml(formatMoney(item.lineTotalCents, currency))}</td>
+        <td style="padding:10px 0;color:${INK};font-size:13px;font-weight:700;text-align:right;vertical-align:top;white-space:nowrap">${escapeHtml(amount)}</td>
       </tr>`;
     })
     .join("");
 
+  const totalLabel = hidePrices ? "Quote pending" : formatMoney(totalCents, currency);
   const html = `<p style="margin:18px 0 8px;color:${MUTED};font-size:11px;font-weight:700;letter-spacing:0.8px;text-transform:uppercase">Order items</p>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:0 0 8px">${rows}
       <tr>
         <td style="padding:12px 12px 0 0;border-top:1px solid ${LINE};color:${NAVY};font-size:14px;font-weight:800">Total</td>
-        <td style="padding:12px 0 0;border-top:1px solid ${LINE};color:${NAVY};font-size:16px;font-weight:800;text-align:right">${escapeHtml(formatMoney(totalCents, currency))}</td>
+        <td style="padding:12px 0 0;border-top:1px solid ${LINE};color:${NAVY};font-size:16px;font-weight:800;text-align:right">${escapeHtml(totalLabel)}</td>
       </tr>
     </table>`;
 
@@ -569,9 +581,11 @@ function orderItemsBlock(items: OrderEmailItem[], totalCents: number, currency: 
     "Order items",
     ...items.map(
       (item) =>
-        `- ${item.domain} · ${serviceLabel(item.serviceType, item.nicheType)} × ${item.quantity} · ${formatMoney(item.lineTotalCents, currency)}`,
+        hidePrices
+          ? `- ${item.domain} · ${serviceLabel(item.serviceType, item.nicheType)} × ${item.quantity}${item.contentLink ? ` · ${item.contentLink}` : ""}`
+          : `- ${item.domain} · ${serviceLabel(item.serviceType, item.nicheType)} × ${item.quantity} · ${formatMoney(item.lineTotalCents, currency)}${item.contentLink ? ` · ${item.contentLink}` : ""}`,
     ),
-    `Total: ${formatMoney(totalCents, currency)}`,
+    hidePrices ? "Total: Quote pending" : `Total: ${formatMoney(totalCents, currency)}`,
   ].join("\n");
 
   return { html, text };
@@ -594,7 +608,9 @@ function orderDetailRows(input: OrderEmailFields, keepEmpty: boolean): DetailRow
 }
 
 export function orderClientEmail(input: OrderEmailFields): RenderedEmail {
-  const items = orderItemsBlock(input.items, input.totalCents, input.currency);
+  const items = orderItemsBlock(input.items, input.totalCents, input.currency, {
+    hidePrices: true,
+  });
   const rendered = renderLayout({
     preheader: `We received order ${input.orderNumber}. Our team will review it and follow up shortly.`,
     eyebrow: "Order received",
@@ -625,7 +641,7 @@ export function orderInternalEmail(input: OrderEmailFields): RenderedEmail {
   const items = orderItemsBlock(input.items, input.totalCents, input.currency);
   const adminPath = `/dashboard/super-admin/orders?order=${encodeURIComponent(input.orderNumber)}`;
   const rendered = renderLayout({
-    preheader: `${input.billingName} placed ${input.orderNumber} for ${formatMoney(input.totalCents, input.currency)}. Open Super Admin to manage it.`,
+    preheader: `${input.billingName} placed ${input.orderNumber}. Quote pending — open Super Admin to set prices and accept.`,
     eyebrow: "New marketplace order",
     title: `New order ${input.orderNumber}`,
     intro: `${input.billingName} just placed an order on Linkerbuddy. Review the placements, accept or reject the order, and update fulfillment from Super Admin.`,
@@ -638,7 +654,7 @@ export function orderInternalEmail(input: OrderEmailFields): RenderedEmail {
     stepsTitle: "Recommended next step",
     steps: [
       "Open the order in Super Admin and confirm the sites are still available.",
-      "Mark Accepted to start fulfillment, or Reject if the brief cannot be fulfilled.",
+      "Set item prices, then Mark Accepted to start fulfillment, or Reject if the brief cannot be fulfilled.",
       "Reply to this email to contact the customer directly.",
     ],
     cta: { label: "Manage in Super Admin", href: crmUrl(adminPath) },

@@ -7,7 +7,7 @@ import {
   listingIdParamSchema,
 } from "./marketplace.validation.js";
 import { validate } from "@/middleware/validate.js";
-import { authenticate } from "@/middleware/authenticate.js";
+import { authenticate, optionalAuthenticate } from "@/middleware/authenticate.js";
 import { authorizePermission } from "@/middleware/authorize.js";
 import { marketplaceWriteRateLimiter, marketplaceReadRateLimiter } from "@/middleware/rateLimiter.js";
 
@@ -16,6 +16,7 @@ const router = Router();
 router.get(
   "/",
   marketplaceReadRateLimiter,
+  optionalAuthenticate,
   validate(listListingsQuerySchema, "query"),
   marketplaceController.list,
 );
@@ -35,6 +36,7 @@ router.get(
 router.get(
   "/:id",
   marketplaceReadRateLimiter,
+  optionalAuthenticate,
   validate(listingIdParamSchema, "params"),
   marketplaceController.getById,
 );

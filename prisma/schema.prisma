@@ -352,6 +352,7 @@ model OrderItem {
   unitPriceCents Int
   quantity       Int         @default(1)
   lineTotalCents Int
+  contentLink    String?
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 

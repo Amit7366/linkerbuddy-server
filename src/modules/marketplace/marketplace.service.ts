@@ -8,8 +8,8 @@ import type {
 } from "./marketplace.validation.js";
 
 export const marketplaceService = {
-  async list(query: ListListingsQuery) {
-    return marketplaceModel.findMany(query);
+  async list(query: ListListingsQuery, includePrices = false) {
+    return marketplaceModel.findMany(query, { includePrices });
   },
 
   async getStats() {
@@ -20,8 +20,8 @@ export const marketplaceService = {
     return marketplaceModel.getFacets();
   },
 
-  async getById(id: number) {
-    const listing = await marketplaceModel.findById(id);
+  async getById(id: number, includePrices = false) {
+    const listing = await marketplaceModel.findById(id, { includePrices });
     if (!listing) {
       throw new AppError("Listing not found", 404, "NOT_FOUND");
     }
@@ -37,7 +37,7 @@ export const marketplaceService = {
   },
 
   async update(id: number, input: UpdateListingInput) {
-    const existing = await marketplaceModel.findById(id);
+    const existing = await marketplaceModel.findById(id, { includePrices: true });
     if (!existing) {
       throw new AppError("Listing not found", 404, "NOT_FOUND");
     }
@@ -60,7 +60,7 @@ export const marketplaceService = {
   },
 
   async remove(id: number) {
-    const existing = await marketplaceModel.findById(id);
+    const existing = await marketplaceModel.findById(id, { includePrices: false });
     if (!existing) {
       throw new AppError("Listing not found", 404, "NOT_FOUND");
     }

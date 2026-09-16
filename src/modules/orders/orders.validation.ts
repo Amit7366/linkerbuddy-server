@@ -25,11 +25,30 @@ export const billingSchema = z.object({
   notes: z.string().max(2000).optional().nullable(),
 });
 
+const contentLinkSchema = z
+  .string()
+  .trim()
+  .min(1, "Link of content is required")
+  .max(2000)
+  .transform((value) => (/^https?:\/\//i.test(value) ? value : `https://${value}`))
+  .refine((value) => {
+    try {
+      const url = new URL(value);
+      return (
+        (url.protocol === "http:" || url.protocol === "https:") &&
+        url.hostname.includes(".")
+      );
+    } catch {
+      return false;
+    }
+  }, "Enter a valid content URL");
+
 export const checkoutItemSchema = z.object({
   listingId: z.coerce.number().int().positive(),
   serviceType: serviceTypeSchema,
   nicheType: nicheTypeSchema,
   quantity: z.coerce.number().int().min(1).max(99),
+  contentLink: contentLinkSchema,
 });
 
 export const checkoutIntentSchema = z.object({
@@ -85,6 +104,13 @@ export const updateOrderItemSchema = z.object({
   unitPriceCents: z.coerce.number().int().min(0).optional(),
   domain: z.string().optional(),
   niche: z.string().optional(),
+  contentLink: z
+    .union([z.string().trim().max(2000), z.null()])
+    .optional()
+    .transform((value) => {
+      if (!value) return null;
+      return /^https?:\/\//i.test(value) ? value : `https://${value}`;
+    }),
 });
 
 export const updateOrderSchema = z.object({

@@ -1,4 +1,4 @@
-import type { ListingPrices } from "./listing-prices.js";
+import type { ListingOffered, ListingPrices } from "./listing-prices.js";
 
 export interface MarketplaceListingResponse {
   id: number;
@@ -11,7 +11,8 @@ export interface MarketplaceListingResponse {
   country: string;
   dofollow: boolean;
   maxDofollow: number;
-  prices: ListingPrices;
+  prices?: ListingPrices;
+  offered: ListingOffered;
   tat: string;
   samplePostUrls: string[];
   note: string;

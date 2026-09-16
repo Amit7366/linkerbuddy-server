@@ -9,6 +9,7 @@ import type { MarketplaceListingResponse } from "./marketplace.types.js";
 import {
   columnsToPrices,
   pricesToColumns,
+  pricesToOffered,
   type ListingPriceColumns,
 } from "./listing-prices.js";
 
@@ -49,7 +50,16 @@ async function newestListingIds() {
   return new Set(rows.map((row) => row.id));
 }
 
-function toResponse(row: ListingRow, newestIds?: Set<number>): MarketplaceListingResponse {
+type ListingResponseOptions = {
+  includePrices?: boolean;
+};
+
+function toResponse(
+  row: ListingRow,
+  newestIds?: Set<number>,
+  options: ListingResponseOptions = {},
+): MarketplaceListingResponse {
+  const prices = columnsToPrices(row);
   return {
     id: row.id,
     domain: row.domain,
@@ -61,7 +71,8 @@ function toResponse(row: ListingRow, newestIds?: Set<number>): MarketplaceListin
     country: row.country,
     dofollow: row.dofollow,
     maxDofollow: row.maxDofollow,
-    prices: columnsToPrices(row),
+    offered: pricesToOffered(prices),
+    ...(options.includePrices ? { prices } : {}),
     tat: row.tat,
     samplePostUrls: row.samplePostUrls,
     note: row.note,
@@ -88,10 +99,13 @@ function parseDrRange(value: string): { gte?: number; lte?: number } | null {
 function applyFilterKey(
   key: string,
   and: Prisma.MarketplaceListingWhereInput[],
+  includePrices: boolean,
 ) {
   switch (key) {
     case "budget":
-      and.push({ guestPostRegular: { lte: 50 } });
+      if (includePrices) {
+        and.push({ guestPostRegular: { lte: 50 } });
+      }
       break;
     case "authority":
       and.push({ dr: { gte: 40, lte: 60 } });
@@ -113,7 +127,10 @@ function applyFilterKey(
   }
 }
 
-function buildWhere(query: ListListingsQuery): Prisma.MarketplaceListingWhereInput {
+function buildWhere(
+  query: ListListingsQuery,
+  includePrices: boolean,
+): Prisma.MarketplaceListingWhereInput {
   const where: Prisma.MarketplaceListingWhereInput = {};
   const and: Prisma.MarketplaceListingWhereInput[] = [];
 
@@ -149,7 +166,7 @@ function buildWhere(query: ListListingsQuery): Prisma.MarketplaceListingWhereInp
     filterKeys.add(query.filter);
   }
   for (const key of filterKeys) {
-    applyFilterKey(key, and);
+    applyFilterKey(key, and, includePrices);
   }
 
   if (query.country?.trim()) {
@@ -164,11 +181,11 @@ function buildWhere(query: ListListingsQuery): Prisma.MarketplaceListingWhereInp
     });
   }
 
-  if (query.priceMax !== undefined) {
+  if (includePrices && query.priceMax !== undefined) {
     and.push({ guestPostRegular: { lte: query.priceMax } });
   }
 
-  if (query.priceMin !== undefined) {
+  if (includePrices && query.priceMin !== undefined) {
     and.push({ guestPostRegular: { gte: query.priceMin } });
   }
 
@@ -199,10 +216,14 @@ function buildWhere(query: ListListingsQuery): Prisma.MarketplaceListingWhereInp
 
 function buildOrderBy(
   sort: ListListingsQuery["sort"],
+  includePrices: boolean,
 ): Prisma.MarketplaceListingOrderByWithRelationInput[] {
   switch (sort) {
     case "price":
-      return [{ guestPostRegular: "asc" }, { id: "asc" }];
+      if (includePrices) {
+        return [{ guestPostRegular: "asc" }, { id: "asc" }];
+      }
+      return [{ traffic: "desc" }, { id: "asc" }];
     case "traffic":
       return [{ traffic: "desc" }, { id: "asc" }];
     case "dr":
@@ -217,8 +238,9 @@ function buildOrderBy(
 }
 
 export const marketplaceModel = {
-  async findMany(query: ListListingsQuery) {
-    const where = buildWhere(query);
+  async findMany(query: ListListingsQuery, options: ListingResponseOptions = {}) {
+    const includePrices = options.includePrices ?? true;
+    const where = buildWhere(query, includePrices);
     const skip = (query.page - 1) * query.limit;
     const sort = query.sort ?? "recommended";
 
@@ -227,14 +249,14 @@ export const marketplaceModel = {
         where,
         skip,
         take: query.limit,
-        orderBy: buildOrderBy(sort),
+        orderBy: buildOrderBy(sort, includePrices),
       }),
       prisma.marketplaceListing.count({ where }),
       newestListingIds(),
     ]);
 
     return {
-      listings: rows.map((row) => toResponse(row, newestIds)),
+      listings: rows.map((row) => toResponse(row, newestIds, { includePrices })),
       total,
       page: query.page,
       limit: query.limit,
@@ -280,12 +302,13 @@ export const marketplaceModel = {
     };
   },
 
-  async findById(id: number) {
+  async findById(id: number, options: ListingResponseOptions = {}) {
+    const includePrices = options.includePrices ?? true;
     const [row, newestIds] = await Promise.all([
       prisma.marketplaceListing.findUnique({ where: { id } }),
       newestListingIds(),
     ]);
-    return row ? toResponse(row, newestIds) : null;
+    return row ? toResponse(row, newestIds, { includePrices }) : null;
   },
 
   async findByDomain(domain: string) {
@@ -313,7 +336,7 @@ export const marketplaceModel = {
       },
     });
     const newestIds = await newestListingIds();
-    return toResponse(row, newestIds);
+    return toResponse(row, newestIds, { includePrices: true });
   },
 
   async update(id: number, data: UpdateListingInput) {
@@ -330,7 +353,7 @@ export const marketplaceModel = {
       },
     });
     const newestIds = await newestListingIds();
-    return toResponse(row, newestIds);
+    return toResponse(row, newestIds, { includePrices: true });
   },
 
   async delete(id: number) {
