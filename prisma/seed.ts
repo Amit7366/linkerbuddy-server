@@ -154,6 +154,10 @@ async function main() {
 
   const raw = readFileSync(join(__dirname, "data/site-listings.json"), "utf8");
   const listings = JSON.parse(raw) as SeedListing[];
+  const removed = await prisma.marketplaceListing.deleteMany({
+    where: { domain: { notIn: listings.map((listing) => listing.domain) } },
+  });
+  console.log(`Removed ${removed.count} marketplace listings not in seed`);
   let upserted = 0;
   for (const listing of listings) {
     const withNote = {

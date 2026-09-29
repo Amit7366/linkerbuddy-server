@@ -1,8 +1,10 @@
+import { cloudflareAnalytics } from "@/lib/cloudflare-analytics.js";
 import { prisma } from "@/lib/prisma.js";
 import type {
   DashboardActivity,
   DashboardOverview,
   DashboardSeverity,
+  VisitorRange,
 } from "./dashboard.types.js";
 
 const OPEN_ORDER_STATUSES = ["PENDING", "ACCEPTED"] as const;
@@ -274,5 +276,13 @@ export const dashboardService = {
         countries: countryGroups.length,
       },
     };
+  },
+
+  getVisitors(range: VisitorRange) {
+    return cloudflareAnalytics.getReport(range);
+  },
+
+  getLiveVisitors() {
+    return cloudflareAnalytics.getLive();
   },
 };

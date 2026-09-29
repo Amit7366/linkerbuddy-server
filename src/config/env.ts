@@ -22,6 +22,9 @@ const envSchema = z.object({
   SMTP_FROM: z.string().optional().default(""),
   NOTIFY_EMAIL: z.string().email().optional().default("omit9090@gmail.com"),
   DEFAULT_MEET_URL: z.string().optional().default(""),
+  CLOUDFLARE_API_TOKEN: z.string().optional().default(""),
+  CLOUDFLARE_ZONE_ID: z.string().optional().default(""),
+  CLOUDFLARE_HOSTNAME: z.string().optional().default(""),
 });
 
 export type Env = z.infer<typeof envSchema>;

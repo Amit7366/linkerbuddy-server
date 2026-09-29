@@ -31,3 +31,5 @@ export type DashboardOverview = {
   pending: { orders: number; cta: number; calls: number };
   inventory: { total: number; countries: number };
 };
+
+export type { LiveVisitors, VisitorRange, VisitorReport } from "@/lib/cloudflare-analytics.js";
